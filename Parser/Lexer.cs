@@ -14,11 +14,15 @@ namespace Parser
         Space,
         Number,
         Word,
-        Option,
+        ReservedWord,
+        Alias,
         String,
         Open,
         Close,
         Slash,
+        Comma,
+        QuestionMark,
+        Dot,
         Equals,
         Ampersand
     }
@@ -37,7 +41,8 @@ namespace Parser
             => (c >= 'A' && c <= 'z') || c.IsNumber();
 
         public static bool IsWhitespace(this char c)
-            => c == ' '; 
+            => c == ' ';
+        
 
 
         public static int DecodeAsHex(this char c) {
@@ -191,7 +196,7 @@ namespace Parser
 
             while(x.Shift().IsWordChar()) { }
             
-            return x.Emit(Token.Option);
+            return x.Emit(Token.ReservedWord);
         }
                         
         static Span<Token>? LexWord(Context x) 
@@ -216,10 +221,14 @@ namespace Parser
         static Span<Token>? LexChars(Context x) 
         {
             switch(x.Char) {
+                case '/': return x.ShiftAndEmit(Token.Slash);
+                case ',': return x.ShiftAndEmit(Token.Comma);
+                case '.': return x.ShiftAndEmit(Token.Dot);
                 case '=': return x.ShiftAndEmit(Token.Equals);
                 case '(': return x.ShiftAndEmit(Token.Open);
                 case ')': return x.ShiftAndEmit(Token.Close);
                 case '&': return x.ShiftAndEmit(Token.Ampersand);
+                case '?': return x.ShiftAndEmit(Token.QuestionMark);
                 default:  return null;
             }
         }

@@ -28,4 +28,15 @@ namespace Parser
 
     }
 
+
+
+    public static class SpanExtensions
+    {
+        public static string From<T>(this Span<T> span, string source)
+            => source.Substring(span.Left, span.Right - span.Left);         //but what about handling percent-encodings?
+                                                                            //we'll need to manually populate a new string(n)
+    }
+
+
+
 }
