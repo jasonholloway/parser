@@ -39,7 +39,7 @@ namespace Parser.Tests
         }
 
 
-        [Fact]
+        [Fact(DisplayName = "Parser stagifies functions & args")]
         public void Stagifies_Functions() 
         {
             var source = "Animals/Choose('Dogs','Chihuahuas')/Biggest()";

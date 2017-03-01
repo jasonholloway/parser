@@ -39,7 +39,21 @@ namespace Parser
 
 
 
-    
+
+    public class StringNode : INode
+    {
+        public readonly Span<Token> Value;
+
+        public StringNode(Span<Token> value) {
+            Value = value;
+        }
+    }
+
+
+
+
+
+
     //public class FilterStage : IStage
     //{
     //    public StageType Type => StageType.Filter;
@@ -144,7 +158,7 @@ namespace Parser
 
         public static IEnumerable<IStage> Parse(string source)
             => Parse(Lexer.Lex(source), source);
-        
+                
 
         public static IEnumerable<IStage> Parse(IEnumerable<Span<Token>> tokenSpans, string source) 
         {
@@ -153,52 +167,124 @@ namespace Parser
 
             if(x.Current.Token != Token.Start) throw new InvalidOperationException();
             x.Shift();
-
-            while(x.Current.Token != Token.End) {                
-                var stage = _ParseWord(x);
-
-                if(stage == null) throw new InvalidOperationException();
-
+            
+            while(x.Current.Token != Token.End) {                                
+                var stage = ParseStage(x);          //we should handle slashes etc here
                 yield return stage;
             }
         }
+
+
+
+
+
+        static INode ParseNode(Context x)
+            => GiveUp<INode>();
+
+
+
+
+
+
+
+
+        static IStage ParseStage(Context x)
+            => ParseStage_FromWord(x)
+                ?? GiveUp<IStage>();
         
 
-        static IStage _ParseWord(Context x) 
-        {
+        static IStage ParseStage_FromWord(Context x) {
             if(x.Current.Token != Token.Word) return null;
-
-            var nameSpan = x.Current;
+            
+            var name = x.Current;
 
             x.Shift();
 
             switch(x.Current.Token) {
-                case Token.Slash:
-                case Token.End: {
-                        var stage = new SubsetStage(nameSpan);
+                case Token.Open: {                  //now we know its a function
+                        var args = ParseArgs(x).ToArray();
+
+                        //could avoid materializing above if we synactically looked ahead 
+
+                        
+                        //*****************************************************
+                        //Lazy stages, but eager nodes - this would allow early stages to be lopped off
+                        //without further parsing
+                        //*****************************************************
+
+
+
+
+
+
+                          
+                        //now we must let loose our sub-parsers, to parse arguments into nodes
+
+                        while(x.Current.Token != Token.Close) ParseNode(x);
+
+                        if(x.Shift().Token == Token.Slash) x.Shift();
+
+                        return new FunctionStage(name, args);
+                    }
+
+                default: {                          //if terminated by something else, treat as subset
+                        var stage = new SubsetStage(name);
                         x.Shift();
                         return stage;
-                    }
-
-                case Token.Open: {
-                        //now we know its a function, ja...
-                        //parse args
-
-                        var args = new INode[0];
-                                                
-                        while(x.Current.Token != Token.Close) x.Shift();
-                                                
-                        if(x.Shift().Token == Token.Slash) x.Shift();
-                        
-                        //x.Shift();
-
-                        return new FunctionStage(nameSpan, args);
-                    }
+                    }                                        
             }
 
             throw new NotImplementedException();
         }
 
+
+
+        static IEnumerable<INode> ParseArgs(Context x) 
+        {
+            x.Shift();
+
+            while(x.Current.Token != Token.Close) {
+                yield return ParseNode_FromWord(x)
+                              ?? ParseNode_FromString(x)
+                              ?? GiveUp<INode>();
+            }
+        }
+
+
+
+
+
+        static INode ParseNode_FromWord(Context x) {
+            if(x.Current.Token != Token.Word) return null;
+            throw new NotImplementedException();
+        }
+
+        static INode ParseNode_FromString(Context x) {
+            if(x.Current.Token != Token.String) return null;
+            
+            var node = new StringNode(x.Current);
+
+            x.Shift();
+
+            return node;
+        }
+
+
+
+
+
+
+        //static IStage ParseStage_FromOption(Context x) {
+        //    if(x.Current.Token != Token.)
+        //}
+
+
+
+
+        static T GiveUp<T>()
+            => throw new InvalidOperationException($"No parsing strategy available!");
+
+        
 
 
 
