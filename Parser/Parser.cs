@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -153,83 +154,196 @@ namespace Parser
 
 
 
-    public static class Parser
-    {        
+    public class Query
+    {
+        public readonly IStage[] Path;
+        public readonly INode Filter;
+        public readonly INode Select;
+        public readonly int? Top;
+        public readonly int? Skip;
 
-        public static IEnumerable<IStage> Parse(string source)
-            => Parse(Lexer.Lex(source), source);
-                
+        public Query(QuerySpec spec) {
+            Path = spec.Path;
+            Filter = spec.Filter;
+            Select = spec.Select;
+            Top = spec.Top;
+            Skip = spec.Skip;
+        }
+    }
 
-        public static IEnumerable<IStage> Parse(IEnumerable<Span<Token>> tokenSpans, string source) 
+
+
+    public class QuerySpec
+    {
+        public IStage[] Path;
+        public INode Filter;
+        public INode Select;
+        public int? Top;
+        public int? Skip;
+    }
+
+
+
+
+    public static class ParseExtensions
+    {
+        public static void MustBe(this Token token, Token comp) {
+            if(token != comp) throw new InvalidOperationException("Unexpected token encountered!");
+        }
+    }
+
+
+
+
+
+    public class Parser
+    {
+
+        public static Query Parse(string source)
+            => new Parser(source).Parse();
+
+
+
+        #region bits
+
+        readonly string _source;
+        readonly IEnumerator<Span<Token>> _tokens;
+
+        
+        public Parser(string source) {
+            _source = source;
+            _tokens = Lexer.Lex(_source).GetEnumerator();
+        }
+
+
+
+        Span<Token> Next() {
+            _tokens.MoveNext();
+            return _tokens.Current;
+        }
+
+        public Span<Token> Current => _tokens.Current;
+
+        public Token Token => Current.Token;
+
+        #endregion
+
+
+
+
+
+
+
+
+        public class RootStage : IStage
         {
-            var x = new Context(tokenSpans.GetEnumerator(), source);
-            x.Shift();
 
-            if(x.Current.Token != Token.Start) throw new InvalidOperationException();
-            x.Shift();
+        }
+
+
+        QuerySpec _spec;
+
+        
+        Query Parse() 
+        {
+            Next().Token.MustBe(Token.Start);
             
-            while(x.Current.Token != Token.End) {                                
-                var stage = ParseStage(x);          //we should handle slashes etc here
-                yield return stage;
+            Next();
+
+            _spec.Path = ParsePath();
+            ParseOptions();
+            ParseFragment();
+
+            Token.MustBe(Token.End);
+            
+            return new Query(_spec);
+        }
+
+
+
+        IStage[] ParsePath() 
+        {
+            var stages = new List<IStage>(8);
+
+            while(true) {                
+                if(Token == Token.Slash) Next();
+
+                var stage = ParseStage();
+
+                if(stage == null) break;
+                else stages.Add(stage);
             }
+
+            return stages.ToArray();
+        }
+
+
+        void ParseOptions() {
+            //...
+        }
+
+        void ParseFragment() {
+            //...
+        }
+
+
+
+        
+
+        
+
+        
+
+        IStage ParseStage()
+            => ParseStage_FromWord()
+                ?? Error<IStage>();
+        
+
+
+        IStage ParseSegment_Subset() {
+            if(Token != Token.Word) return null;
+
+            var name = Current;           
+
+            Next();
+
+            return new SubsetStage(name);
+        }
+
+        IStage ParseSegment_Function() {
+            if(Token != Token.Word) return null;   //need lookahead here
+
+            var name = Current;
+
         }
 
 
 
 
-
-        static INode ParseNode(Context x)
-            => GiveUp<INode>();
-
-
-
-
-
-
-
-
-        static IStage ParseStage(Context x)
-            => ParseStage_FromWord(x)
-                ?? GiveUp<IStage>();
-        
-
-        static IStage ParseStage_FromWord(Context x) {
-            if(x.Current.Token != Token.Word) return null;
+        IStage ParseStage_FromWord() 
+        {
+            if(Token != Token.Word) return null;
             
-            var name = x.Current;
+            var name = Current;
 
-            x.Shift();
+            Next();
 
-            switch(x.Current.Token) {
+            switch(Current.Token) {
                 case Token.Open: {                  //now we know its a function
-                        var args = ParseArgs(x).ToArray();
-
-                        //could avoid materializing above if we synactically looked ahead 
-
+                        var args = ParseArgs();
                         
-                        //*****************************************************
-                        //Lazy stages, but eager nodes - this would allow early stages to be lopped off
-                        //without further parsing
-                        //*****************************************************
+                        while(Token != Token.Close) ParseNode();
 
+                        Next();
 
-
-
-
-
-                          
-                        //now we must let loose our sub-parsers, to parse arguments into nodes
-
-                        while(x.Current.Token != Token.Close) ParseNode(x);
-
-                        if(x.Shift().Token == Token.Slash) x.Shift();
+                        if(Token == Token.Slash) Next();
 
                         return new FunctionStage(name, args);
                     }
 
                 default: {                          //if terminated by something else, treat as subset
                         var stage = new SubsetStage(name);
-                        x.Shift();
+                        Next();
                         return stage;
                     }                                        
             }
@@ -238,15 +352,24 @@ namespace Parser
         }
 
 
+        
 
-        static IEnumerable<INode> ParseArgs(Context x) 
+        IEnumerable<INode> ParseArgs() 
         {
-            x.Shift();
+            Next();
 
-            while(x.Current.Token != Token.Close) {
-                yield return ParseNode_FromWord(x)
-                              ?? ParseNode_FromString(x)
-                              ?? GiveUp<INode>();
+            while(true) {
+                switch(Current.Token) {                    
+                    case Token.Comma:
+                        break;
+
+                    case Token.Close:
+                        yield break;
+
+                    default:
+                        yield return ParseNode();
+                        break;
+                }
             }
         }
 
@@ -254,17 +377,23 @@ namespace Parser
 
 
 
-        static INode ParseNode_FromWord(Context x) {
-            if(x.Current.Token != Token.Word) return null;
+        INode ParseNode()
+            => ParseNode_FromWord()
+                ?? ParseNode_FromString()
+                ?? Error<INode>();
+
+
+        INode ParseNode_FromWord() {
+            if(Current.Token != Token.Word) return null;
             throw new NotImplementedException();
         }
 
-        static INode ParseNode_FromString(Context x) {
-            if(x.Current.Token != Token.String) return null;
+        INode ParseNode_FromString() {
+            if(Current.Token != Token.String) return null;
             
-            var node = new StringNode(x.Current);
+            var node = new StringNode(Current);
 
-            x.Shift();
+            Next();
 
             return node;
         }
@@ -280,49 +409,16 @@ namespace Parser
 
 
 
+        static T Null<T>()
+            where T : class
+            => null;
+        
 
-        static T GiveUp<T>()
+        static T Error<T>()
             => throw new InvalidOperationException($"No parsing strategy available!");
 
         
-
-
-
-
-
-
-
-
-        class Context
-        {
-            readonly IEnumerator<Span<Token>> _tokens;
-
-            public readonly string Source;
-
-            public Context(IEnumerator<Span<Token>> tokens, string source) {
-                _tokens = tokens;
-                Source = source;
-            }
-            
-            public Span<Token> Current => _tokens.Current;
-
-            public Span<Token> Shift() {
-                _tokens.MoveNext();
-                return _tokens.Current;
-            }
-            
-        }
-
-
         
-        
-        
-
-
-
-
-
-
 
 
 

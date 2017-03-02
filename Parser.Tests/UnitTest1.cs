@@ -27,14 +27,15 @@ namespace Parser.Tests
 
 
         [Fact]
-        public void Stagifies_Subsets() {
+        public void Stagifies_Subsets() 
+        {
             var source = "Dogs/Chihuahuas";
-            var stages = Parser.Parse(source).ToArray();
+            var query = Parser.Parse(source);
 
-            var stage1 = (SubsetStage)stages[0];
+            var stage1 = (SubsetStage)query.Path[0];
             Assert.Equal("Dogs", stage1.Name.From(source));
 
-            var stage2 = (SubsetStage)stages[1];
+            var stage2 = (SubsetStage)query.Path[1];
             Assert.Equal("Chihuahuas", stage2.Name.From(source));
         }
 
@@ -43,12 +44,12 @@ namespace Parser.Tests
         public void Stagifies_Functions() 
         {
             var source = "Animals/Choose('Dogs','Chihuahuas')/Biggest()";
-            var stages = Parser.Parse(source).ToArray();
+            var query = Parser.Parse(source);
 
-            var stage1 = (SubsetStage)stages[0];
+            var stage1 = (SubsetStage)query.Path[0];
             Assert.Equal("Animals", stage1.Name.From(source));
             
-            var stage2 = (FunctionStage)stages[1];
+            var stage2 = (FunctionStage)query.Path[1];
             Assert.Equal("Choose", stage2.Name.From(source));
 
             var args = stage2.Args.ToArray();
@@ -59,7 +60,7 @@ namespace Parser.Tests
             
             //TEST ARGS HERE!!!!!
 
-            var stage3 = (FunctionStage)stages[2];
+            var stage3 = (FunctionStage)query.Path[2];
             Assert.Equal("Biggest", stage2.Name.From(source));
             Assert.Empty(stage3.Args);
         }

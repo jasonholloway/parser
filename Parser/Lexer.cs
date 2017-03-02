@@ -22,6 +22,7 @@ namespace Parser
         Slash,
         Comma,
         QuestionMark,
+        Hash,
         Dot,
         Equals,
         Ampersand
@@ -229,6 +230,7 @@ namespace Parser
                 case ')': return x.ShiftAndEmit(Token.Close);
                 case '&': return x.ShiftAndEmit(Token.Ampersand);
                 case '?': return x.ShiftAndEmit(Token.QuestionMark);
+                case '#': return x.ShiftAndEmit(Token.Hash);
                 default:  return null;
             }
         }
