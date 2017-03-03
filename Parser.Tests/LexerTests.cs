@@ -17,14 +17,14 @@ namespace Parser.Tests
 
             Assert.Equal(spans,
                 new[] {
-                    Span.Of(Token.Start, 0, 0),
-                    Span.Of(Token.Word, 0, 4),
-                    Span.Of(Token.Slash, 4, 5),
-                    Span.Of(Token.Word, 5, 15),
-                    Span.Of(Token.Open, 15, 16),
-                    Span.Of(Token.String, 16, 23),
-                    Span.Of(Token.Close, 23, 24),
-                    Span.Of(Token.End, 24, 24)
+                    TokenSpan.Of(Token.Start, 0, 0),
+                    TokenSpan.Of(Token.Word, 0, 4),
+                    TokenSpan.Of(Token.Slash, 4, 5),
+                    TokenSpan.Of(Token.Word, 5, 15),
+                    TokenSpan.Of(Token.Open, 15, 16),
+                    TokenSpan.Of(Token.String, 17, 22),
+                    TokenSpan.Of(Token.Close, 23, 24),
+                    TokenSpan.Of(Token.End, 24, 24)
                 });
         }
 
@@ -39,15 +39,15 @@ namespace Parser.Tests
 
             Assert.Equal(spans,
                         new[] {
-                            Span.Of(Token.Start, 0, 0),
-                            Span.Of(Token.ReservedWord, 0, 7),
-                            Span.Of(Token.Equals, 7, 8),
-                            Span.Of(Token.Word, 8, 12),
-                            Span.Of(Token.Space, 12, 13),
-                            Span.Of(Token.Word, 13, 15),
-                            Span.Of(Token.Space, 15, 16),
-                            Span.Of(Token.String, 16, 23),
-                            Span.Of(Token.End, 23, 23)
+                            TokenSpan.Of(Token.Start, 0, 0),
+                            TokenSpan.Of(Token.ReservedWord, 0, 7),
+                            TokenSpan.Of(Token.Equals, 7, 8),
+                            TokenSpan.Of(Token.Word, 8, 12),
+                            TokenSpan.Of(Token.Space, 12, 13),
+                            TokenSpan.Of(Token.Word, 13, 15),
+                            TokenSpan.Of(Token.Space, 15, 16),
+                            TokenSpan.Of(Token.String, 17, 22),
+                            TokenSpan.Of(Token.End, 23, 23)
                         });
         }
 
@@ -59,27 +59,27 @@ namespace Parser.Tests
 
             Assert.Equal(spans,
                         new[] {
-                            Span.Of(Token.Start, 0, 0),
-                            Span.Of(Token.ReservedWord, 0, 4),
-                            Span.Of(Token.Equals, 4, 5),
-                            Span.Of(Token.Number, 5, 6),
-                            Span.Of(Token.Ampersand, 6, 7),
-                            Span.Of(Token.ReservedWord, 7, 15),
-                            Span.Of(Token.Equals, 15, 16),
-                            Span.Of(Token.Word, 16, 20),
+                            TokenSpan.Of(Token.Start, 0, 0),
+                            TokenSpan.Of(Token.ReservedWord, 0, 4),
+                            TokenSpan.Of(Token.Equals, 4, 5),
+                            TokenSpan.Of(Token.Number, 5, 6),
+                            TokenSpan.Of(Token.Ampersand, 6, 7),
+                            TokenSpan.Of(Token.ReservedWord, 7, 15),
+                            TokenSpan.Of(Token.Equals, 15, 16),
+                            TokenSpan.Of(Token.Word, 16, 20),
 
-                            Span.Of(Token.Ampersand, 20, 21),
-                            Span.Of(Token.ReservedWord, 21, 28),
-                            Span.Of(Token.Equals, 28, 29),
-                            Span.Of(Token.Open, 29, 30),
-                            Span.Of(Token.Word, 30, 35),
-                            Span.Of(Token.Space, 35, 36),
-                            Span.Of(Token.Word, 36, 38),
-                            Span.Of(Token.Space, 38, 39),
-                            Span.Of(Token.Number, 39, 43),
-                            Span.Of(Token.Close, 43, 44),
+                            TokenSpan.Of(Token.Ampersand, 20, 21),
+                            TokenSpan.Of(Token.ReservedWord, 21, 28),
+                            TokenSpan.Of(Token.Equals, 28, 29),
+                            TokenSpan.Of(Token.Open, 29, 30),
+                            TokenSpan.Of(Token.Word, 30, 35),
+                            TokenSpan.Of(Token.Space, 35, 36),
+                            TokenSpan.Of(Token.Word, 36, 38),
+                            TokenSpan.Of(Token.Space, 38, 39),
+                            TokenSpan.Of(Token.Number, 39, 43),
+                            TokenSpan.Of(Token.Close, 43, 44),
 
-                            Span.Of(Token.End, 44, 44)
+                            TokenSpan.Of(Token.End, 44, 44)
                         });
         }
 
@@ -91,15 +91,15 @@ namespace Parser.Tests
 
             Assert.Equal(spans,
                         new[] {
-                            Span.Of(Token.Start, 0, 0),
-                            Span.Of(Token.ReservedWord, 0, 7),
-                            Span.Of(Token.Equals, 7, 8),
-                            Span.Of(Token.Word, 8, 15),
-                            Span.Of(Token.Space, 15, 16),
-                            Span.Of(Token.Word, 16, 18),
-                            Span.Of(Token.Space, 18, 19),
-                            Span.Of(Token.String, 19, 29),
-                            Span.Of(Token.End, 29, 29)
+                            TokenSpan.Of(Token.Start, 0, 0),
+                            TokenSpan.Of(Token.ReservedWord, 0, 7),
+                            TokenSpan.Of(Token.Equals, 7, 8),
+                            TokenSpan.Of(Token.Word, 8, 15),
+                            TokenSpan.Of(Token.Space, 15, 16),
+                            TokenSpan.Of(Token.Word, 16, 18),
+                            TokenSpan.Of(Token.Space, 18, 19),
+                            TokenSpan.Of(Token.String, 20, 28),
+                            TokenSpan.Of(Token.End, 29, 29)
                         });
         }
 
@@ -112,11 +112,11 @@ namespace Parser.Tests
 
             Assert.Equal(spans,
                         new[] {
-                            Span.Of(Token.Start, 0, 0),
-                            Span.Of(Token.Open, 0, 1),
-                            Span.Of(Token.String, 1, 12),
-                            Span.Of(Token.Close, 12, 13),
-                            Span.Of(Token.End, 13, 13)
+                            TokenSpan.Of(Token.Start, 0, 0),
+                            TokenSpan.Of(Token.Open, 0, 1),
+                            TokenSpan.Of(Token.String, 4, 9),
+                            TokenSpan.Of(Token.Close, 12, 13),
+                            TokenSpan.Of(Token.End, 13, 13)
                         });
         }
 
@@ -130,17 +130,17 @@ namespace Parser.Tests
 
             Assert.Equal(spans,
                         new[] {
-                            Span.Of(Token.Start, 0, 0),
-                            Span.Of(Token.ReservedWord, 0, 7),
-                            Span.Of(Token.Equals, 7, 8),
-                            Span.Of(Token.Open, 8, 11),
-                            Span.Of(Token.Word, 11, 18),
-                            Span.Of(Token.Space, 18, 19),
-                            Span.Of(Token.Word, 19, 21),
-                            Span.Of(Token.Space, 21, 22),
-                            Span.Of(Token.String, 22, 40),
-                            Span.Of(Token.Close, 40, 43),
-                            Span.Of(Token.End, 43, 43)
+                            TokenSpan.Of(Token.Start, 0, 0),
+                            TokenSpan.Of(Token.ReservedWord, 0, 7),
+                            TokenSpan.Of(Token.Equals, 7, 8),
+                            TokenSpan.Of(Token.Open, 8, 11),
+                            TokenSpan.Of(Token.Word, 11, 18),
+                            TokenSpan.Of(Token.Space, 18, 19),
+                            TokenSpan.Of(Token.Word, 19, 21),
+                            TokenSpan.Of(Token.Space, 21, 22),
+                            TokenSpan.Of(Token.String, 25, 37),
+                            TokenSpan.Of(Token.Close, 40, 43),
+                            TokenSpan.Of(Token.End, 43, 43)
                         });
         }
 

@@ -9,6 +9,7 @@ namespace Parser
     
     public enum Token
     {
+        None,
         Start,
         End,
         Space,
@@ -127,13 +128,14 @@ namespace Parser
                 => RemainingCount == 0 && Start >= SourceLength;
 
 
-            public Span<Token> Emit(Token type) {                                
-                var token = Span.Of(type, Start, Last);
+            public TokenSpan Emit(Token type, int leftOffset = 0, int rightOffset = 0) 
+            {                                
+                var token = TokenSpan.Of(type, Start + leftOffset, Last + rightOffset); //bad!!!!!!! - instead of bodging the span, should skip chars and lookahead in lexing
                 Start = Last;
                 return token;
             }
              
-            public Span<Token> ShiftAndEmit(Token type) {
+            public TokenSpan ShiftAndEmit(Token type) {
                 Shift();
                 return Emit(type);
             }
@@ -144,19 +146,19 @@ namespace Parser
 
         
 
-        public static IEnumerable<Span<Token>> Lex(string source)
+        public static IEnumerable<TokenSpan> Lex(string source)
             => Lex(new Context(source));
             
                 
 
-        static IEnumerable<Span<Token>> Lex(Context x) 
+        static IEnumerable<TokenSpan> Lex(Context x) 
         {
             x.Shift();
 
             yield return x.Emit(Token.Start);
             
             while(!x.AtEnd) {
-                yield return (Span<Token>)(LexSpace(x)
+                yield return (TokenSpan)(LexSpace(x)
                                             ?? LexChars(x)
                                             ?? LexNumeric(x)
                                             ?? LexString(x)
@@ -168,7 +170,7 @@ namespace Parser
         }
 
         
-        static Span<Token>? LexNumeric(Context x) 
+        static TokenSpan? LexNumeric(Context x) 
         {
             if(!x.Char.IsNumber()) return null;
 
@@ -178,7 +180,7 @@ namespace Parser
         }
 
 
-        static Span<Token>? LexString(Context x) 
+        static TokenSpan? LexString(Context x) 
         {
             if(!x.Char.IsQuoteMark()) return null;
 
@@ -186,10 +188,10 @@ namespace Parser
                 if(x.Shift().IsQuoteMark() && !x.Shift().IsQuoteMark()) break;
             }
             
-            return x.Emit(Token.String);
+            return x.Emit(Token.String, 1, -1);
         }
 
-        static Span<Token>? LexHeading(Context x) 
+        static TokenSpan? LexHeading(Context x) 
         {
             if(x.Char != '$') return null;
 
@@ -200,7 +202,7 @@ namespace Parser
             return x.Emit(Token.ReservedWord);
         }
                         
-        static Span<Token>? LexWord(Context x) 
+        static TokenSpan? LexWord(Context x) 
         {
             if(!x.Char.IsWordChar()) return null;
 
@@ -209,7 +211,7 @@ namespace Parser
             return x.Emit(Token.Word);
         }
 
-        static Span<Token>? LexSpace(Context x) 
+        static TokenSpan? LexSpace(Context x) 
         {
             if(!x.Char.IsWhitespace()) return null;
 
@@ -219,7 +221,7 @@ namespace Parser
         }
 
 
-        static Span<Token>? LexChars(Context x) 
+        static TokenSpan? LexChars(Context x) 
         {
             switch(x.Char) {
                 case '/': return x.ShiftAndEmit(Token.Slash);

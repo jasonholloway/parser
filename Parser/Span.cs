@@ -5,23 +5,44 @@ using System.Text;
 namespace Parser
 {
 
-    public static class Span
+    public struct Span
     {
-        public static Span<T> Of<T>(T token, int left, int right)
-            => new Span<T>(token, left, right);
-    }
-
-    public struct Span<T>
-    {
-        public readonly T Token;
         public readonly int Left;
         public readonly int Right;
 
-        public Span(T token, int left, int right) {
+        public Span(int left, int right) {
+            Left = left;
+            Right = right;
+        }
+    }
+
+
+
+
+    public struct TokenSpan
+    {
+        public readonly Token Token;
+        public readonly int Left;
+        public readonly int Right;
+
+        public TokenSpan(Token token, int left, int right) {
             Token = token;
             Left = left;
             Right = right;
         }
+
+        
+        static public implicit operator Span(TokenSpan inp)
+            => new Span(inp.Left, inp.Right);
+
+
+        public static TokenSpan Of(Token token, int left, int right)
+            => new TokenSpan(token, left, right);
+
+
+        public static TokenSpan None
+            = new TokenSpan(Token.None, 0, 0);
+        
 
         public override string ToString()
             => $"({Left}, {Right}) {Token}";
@@ -32,7 +53,10 @@ namespace Parser
 
     public static class SpanExtensions
     {
-        public static string From<T>(this Span<T> span, string source)
+        public static string From(this Span span, string source)
+            => source.Substring(span.Left, span.Right - span.Left);
+
+        public static string From(this TokenSpan span, string source)
             => source.Substring(span.Left, span.Right - span.Left);         //but what about handling percent-encodings?
                                                                             //we'll need to manually populate a new string(n)
     }

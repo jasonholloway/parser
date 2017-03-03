@@ -7,48 +7,14 @@ using System.Text;
 namespace Parser
 {
     
-    
+    //public class StringNode : INode
+    //{
+    //    public readonly Span<Token> Value;
 
-    public interface IStage : INode
-    {
-    }
-
-    
-    public class SubsetStage : IStage
-    {
-        public SubsetStage(Span<Token> name) {
-            Name = name;
-        }
-        
-        public Span<Token> Name { get; private set; }        
-    }
-
-
-    
-
-    public class FunctionStage : IStage
-    {
-        public FunctionStage(Span<Token> name, IEnumerable<INode> args) {
-            Name = name;
-            Args = args;
-        }
-
-        public Span<Token> Name { get; private set; }        
-        public IEnumerable<INode> Args { get; private set; }
-        
-    }
-
-
-
-
-    public class StringNode : INode
-    {
-        public readonly Span<Token> Value;
-
-        public StringNode(Span<Token> value) {
-            Value = value;
-        }
-    }
+    //    public StringNode(Span<Token> value) {
+    //        Value = value;
+    //    }
+    //}
 
 
 
@@ -87,76 +53,74 @@ namespace Parser
 
 
 
-    public enum StageType
-    {
-        Root,
-        Subset,
-        Filter,
-        Select,
-        Bind
-    }
+    //public enum StageType
+    //{
+    //    Root,
+    //    Subset,
+    //    Filter,
+    //    Select,
+    //    Bind
+    //}
 
 
 
-    public static class Stagifier
-    {
-        enum Mode
-        {
-            Path,
-            Options,
-            Bindings
-        }
+    //public static class Stagifier
+    //{
+    //    enum Mode
+    //    {
+    //        Path,
+    //        Options,
+    //        Bindings
+    //    }
 
 
-        public static IEnumerable<Span<StageType>> Stagify(IEnumerable<Span<Token>> tokens) 
-        {
-            var en = tokens.GetEnumerator();
-            int left = en.Current.Left;
+    //    public static IEnumerable<TokenSpan<StageType>> Stagify(IEnumerable<TokenSpan> tokens) 
+    //    {
+    //        var en = tokens.GetEnumerator();
+    //        int left = en.Current.Left;
             
-            while(true) {
-                var curr = en.Current;
+    //        while(true) {
+    //            var curr = en.Current;
 
-                switch(curr.Token) {
-                    case Token.Start:
-                        en.MoveNext();
-                        break;
+    //            switch(curr.Token) {
+    //                case Token.Start:
+    //                    en.MoveNext();
+    //                    break;
 
-                    case Token.Word:
-                        yield return Span.Of(StageType.Subset, left, curr.Right);
-                        left = curr.Right;
+    //                case Token.Word:
+    //                    yield return Span.Of(StageType.Subset, left, curr.Right);
+    //                    left = curr.Right;
 
-                        en.MoveNext();
-                        break;
+    //                    en.MoveNext();
+    //                    break;
                                             
-                    case Token.Slash:
-                        en.MoveNext();          
-                        break;
+    //                case Token.Slash:
+    //                    en.MoveNext();          
+    //                    break;
 
-                    case Token.End:
-                    case Token.QuestionMark:
-                        yield break;
+    //                case Token.End:
+    //                case Token.QuestionMark:
+    //                    yield break;
 
-                    default:
-                        throw new NotImplementedException();
-                }
-            }
+    //                default:
+    //                    throw new NotImplementedException();
+    //            }
+    //        }
 
-            throw new NotImplementedException();
-        }
+    //        throw new NotImplementedException();
+    //    }
         
 
 
 
 
-    }
-
-
-
+    //}
+    
 
 
     public class Query
     {
-        public readonly IStage[] Path;
+        public readonly ISegment[] Path;
         public readonly INode Filter;
         public readonly INode Select;
         public readonly int? Top;
@@ -175,7 +139,7 @@ namespace Parser
 
     public class QuerySpec
     {
-        public IStage[] Path;
+        public ISegment[] Path;
         public INode Filter;
         public INode Select;
         public int? Top;
@@ -207,24 +171,34 @@ namespace Parser
         #region bits
 
         readonly string _source;
-        readonly IEnumerator<Span<Token>> _tokens;
+        readonly IEnumerator<TokenSpan> _tokens;
 
         
         public Parser(string source) {
             _source = source;
+
             _tokens = Lexer.Lex(_source).GetEnumerator();
+
+            Next();
+            Next();
         }
 
 
 
-        Span<Token> Next() {
-            _tokens.MoveNext();
-            return _tokens.Current;
+        void Next() {
+            CurrSpan = NextSpan;
+            NextSpan = _tokens.MoveNext()
+                            ? _tokens.Current
+                            : TokenSpan.None;
         }
 
-        public Span<Token> Current => _tokens.Current;
 
-        public Token Token => Current.Token;
+        TokenSpan CurrSpan;
+        TokenSpan NextSpan;
+
+        Token CurrToken => CurrSpan.Token;
+        Token NextToken => NextSpan.Token;
+
 
         #endregion
 
@@ -241,12 +215,12 @@ namespace Parser
         }
 
 
-        QuerySpec _spec;
+        QuerySpec _spec = new QuerySpec();
 
         
         Query Parse() 
         {
-            Next().Token.MustBe(Token.Start);
+            CurrToken.MustBe(Token.Start);
             
             Next();
 
@@ -254,27 +228,33 @@ namespace Parser
             ParseOptions();
             ParseFragment();
 
-            Token.MustBe(Token.End);
+            CurrToken.MustBe(Token.End);
             
             return new Query(_spec);
         }
 
 
 
-        IStage[] ParsePath() 
+        ISegment[] ParsePath() 
         {
-            var stages = new List<IStage>(8);
+            var segments = new List<ISegment>(8);
 
-            while(true) {                
-                if(Token == Token.Slash) Next();
+            while(true) {
+                switch(CurrToken) {                    
+                    case Token.Slash:
+                        Next();
+                        break;
 
-                var stage = ParseStage();
+                    case Token.QuestionMark:
+                    case Token.End:
+                        return segments.ToArray();
 
-                if(stage == null) break;
-                else stages.Add(stage);
-            }
-
-            return stages.ToArray();
+                    default:
+                        var segment = ParseSegment();
+                        segments.Add(segment);
+                        break;
+                }
+            }            
         }
 
 
@@ -288,89 +268,92 @@ namespace Parser
 
 
 
-        
-
-        
-
-        
-
-        IStage ParseStage()
-            => ParseStage_FromWord()
-                ?? Error<IStage>();
-        
-
-
-        IStage ParseSegment_Subset() {
-            if(Token != Token.Word) return null;
-
-            var name = Current;           
-
-            Next();
-
-            return new SubsetStage(name);
-        }
-
-        IStage ParseSegment_Function() {
-            if(Token != Token.Word) return null;   //need lookahead here
-
-            var name = Current;
-
-        }
 
 
 
 
-        IStage ParseStage_FromWord() 
-        {
-            if(Token != Token.Word) return null;
-            
-            var name = Current;
+        ISegment ParseSegment()
+            => Parse_FunctionSegment()
+                ?? Parse_SubsetSegment()
+                ?? Error<ISegment>();
 
-            Next();
 
-            switch(Current.Token) {
-                case Token.Open: {                  //now we know its a function
-                        var args = ParseArgs();
-                        
-                        while(Token != Token.Close) ParseNode();
 
-                        Next();
 
-                        if(Token == Token.Slash) Next();
 
-                        return new FunctionStage(name, args);
-                    }
 
-                default: {                          //if terminated by something else, treat as subset
-                        var stage = new SubsetStage(name);
-                        Next();
-                        return stage;
-                    }                                        
+
+
+
+
+        ISegment Parse_FunctionSegment() {
+            if(CurrToken == Token.Word && NextToken == Token.Open) {
+                var name = CurrSpan;
+
+                Next();
+
+                var args = ParseArgs();
+
+                return new FunctionSegment(name, args);
             }
 
-            throw new NotImplementedException();
+            return null;   //need lookahead here
         }
+
+
+
+
+
+
+        ISegment Parse_SubsetSegment() 
+        {
+            if(CurrToken == Token.Word) 
+            {
+                var name = CurrSpan;
+
+                Next();
+
+                return new SubsetSegment(name);
+            }
+
+            return null;
+        }
+
+
+              
+
+
 
 
         
 
-        IEnumerable<INode> ParseArgs() 
+        INode[] ParseArgs() 
         {
-            Next();
+            if(CurrToken == Token.Open) 
+            {
+                Next();
 
-            while(true) {
-                switch(Current.Token) {                    
-                    case Token.Comma:
-                        break;
+                var args = new List<INode>();
 
-                    case Token.Close:
-                        yield break;
+                while(true) {
+                    switch(CurrToken) {
+                        case Token.Comma:
+                            Next();
+                            break;
 
-                    default:
-                        yield return ParseNode();
-                        break;
+                        case Token.Close:
+                            Next();
+                            return args.ToArray();
+
+                        default:
+                            var node = ParseNode();
+                            args.Add(node);
+                            break;
+                    }
                 }
             }
+
+            return null;
         }
 
 
@@ -378,20 +361,63 @@ namespace Parser
 
 
         INode ParseNode()
-            => ParseNode_FromWord()
-                ?? ParseNode_FromString()
+            => ParseConstant()
                 ?? Error<INode>();
 
 
+
+        INode ParseConstant()
+            => ParseString()
+                ?? ParseInteger()
+                ?? Null<INode>();
+
+
+        
+
+        INode ParseString() 
+        {
+            if(CurrToken == Token.String) 
+            {
+                var @string = CurrSpan;
+
+                Next();
+
+                return new StringNode(@string);
+            }
+
+            return null;
+        }
+
+
+
+        INode ParseInteger() 
+        {
+            if(CurrToken == Token.Number) 
+            {
+                var number = CurrSpan;
+                Next();
+
+                return new IntegerNode(number);
+            }
+
+            return null;
+        }
+
+
+
+
+
+
+
         INode ParseNode_FromWord() {
-            if(Current.Token != Token.Word) return null;
+            if(CurrSpan.Token != Token.Word) return null;
             throw new NotImplementedException();
         }
 
         INode ParseNode_FromString() {
-            if(Current.Token != Token.String) return null;
+            if(CurrSpan.Token != Token.String) return null;
             
-            var node = new StringNode(Current);
+            var node = new StringNode(CurrSpan);
 
             Next();
 
