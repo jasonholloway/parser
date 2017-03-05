@@ -7,127 +7,16 @@ using System.Text;
 namespace Parser
 {
     
-    //public class StringNode : INode
-    //{
-    //    public readonly Span<Token> Value;
-
-    //    public StringNode(Span<Token> value) {
-    //        Value = value;
-    //    }
-    //}
-
-
-
-
-
-
-    //public class FilterStage : IStage
-    //{
-    //    public StageType Type => StageType.Filter;
-
-    //    public IStage Source { get; private set; }
-    //    public INode Filter { get; private set; }
-
-    //    public FilterStage(IStage source, INode filter) {
-    //        Source = source;
-    //        Filter = filter;
-    //    }
-    //}
-
-
-    //public class SelectStage : IStage
-    //{
-    //    public StageType Type => StageType.Select;
-
-    //    public IStage Source { get; private set; }
-    //    public INode Projection { get; private set; } //symbols in the projection to be bound to resources in the source
-
-    //    public SelectStage(IStage source) {
-    //        Source = source;
-    //    }
-    //}
-
-
-
-
-
-
-
-    //public enum StageType
-    //{
-    //    Root,
-    //    Subset,
-    //    Filter,
-    //    Select,
-    //    Bind
-    //}
-
-
-
-    //public static class Stagifier
-    //{
-    //    enum Mode
-    //    {
-    //        Path,
-    //        Options,
-    //        Bindings
-    //    }
-
-
-    //    public static IEnumerable<TokenSpan<StageType>> Stagify(IEnumerable<TokenSpan> tokens) 
-    //    {
-    //        var en = tokens.GetEnumerator();
-    //        int left = en.Current.Left;
-            
-    //        while(true) {
-    //            var curr = en.Current;
-
-    //            switch(curr.Token) {
-    //                case Token.Start:
-    //                    en.MoveNext();
-    //                    break;
-
-    //                case Token.Word:
-    //                    yield return Span.Of(StageType.Subset, left, curr.Right);
-    //                    left = curr.Right;
-
-    //                    en.MoveNext();
-    //                    break;
-                                            
-    //                case Token.Slash:
-    //                    en.MoveNext();          
-    //                    break;
-
-    //                case Token.End:
-    //                case Token.QuestionMark:
-    //                    yield break;
-
-    //                default:
-    //                    throw new NotImplementedException();
-    //            }
-    //        }
-
-    //        throw new NotImplementedException();
-    //    }
-        
-
-
-
-
-    //}
-    
-
-
     public class Query
     {
-        public readonly ISegment[] Path;
+        public readonly IReadOnlyList<ISegment> Path;
         public readonly INode Filter;
         public readonly INode Select;
         public readonly int? Top;
         public readonly int? Skip;
 
         public Query(QuerySpec spec) {
-            Path = spec.Path;
+            Path = spec.Path.AsReadOnly();
             Filter = spec.Filter;
             Select = spec.Select;
             Top = spec.Top;
@@ -139,7 +28,7 @@ namespace Parser
 
     public class QuerySpec
     {
-        public ISegment[] Path;
+        public List<ISegment> Path = new List<ISegment>(4);
         public INode Filter;
         public INode Select;
         public int? Top;
@@ -182,8 +71,7 @@ namespace Parser
             Next();
             Next();
         }
-
-
+        
 
         void Next() {
             CurrSpan = NextSpan;
@@ -199,6 +87,10 @@ namespace Parser
         Token CurrToken => CurrSpan.Token;
         Token NextToken => NextSpan.Token;
 
+        string CurrAsString()
+            => CurrSpan.From(_source);
+
+        QuerySpec Spec = new QuerySpec();
 
         #endregion
 
@@ -215,30 +107,33 @@ namespace Parser
         }
 
 
-        QuerySpec _spec = new QuerySpec();
-
         
         Query Parse() 
         {
-            CurrToken.MustBe(Token.Start);
-            
+            CurrToken.MustBe(Token.Start);            
             Next();
 
-            _spec.Path = ParsePath();
-            ParseOptions();
-            ParseFragment();
+            ParsePath();
+
+            if(CurrToken == Token.QuestionMark) {
+                Next();
+                ParseOptions();
+            }
+
+            if(CurrToken == Token.Hash) {
+                Next();
+                ParseFragment();
+            }
 
             CurrToken.MustBe(Token.End);
             
-            return new Query(_spec);
+            return new Query(Spec);
         }
 
 
 
-        ISegment[] ParsePath() 
+        void ParsePath() 
         {
-            var segments = new List<ISegment>(8);
-
             while(true) {
                 switch(CurrToken) {                    
                     case Token.Slash:
@@ -247,20 +142,71 @@ namespace Parser
 
                     case Token.QuestionMark:
                     case Token.End:
-                        return segments.ToArray();
+                        return;
 
                     default:
                         var segment = ParseSegment();
-                        segments.Add(segment);
+                        Spec.Path.Add(segment);
                         break;
                 }
             }            
         }
 
 
-        void ParseOptions() {
-            //...
+        void ParseOptions() 
+        {
+            while(true) {
+                switch(CurrToken) {
+                    case Token.Ampersand:
+                        Next();
+                        break;
+
+                    case Token.Hash:
+                    case Token.End:
+                        return;
+
+                    default:
+                        ParseOption();                        
+                        break;
+                }
+            }
         }
+
+                
+
+        bool ParseOption()
+            => ParseFilter()
+                || ParseSelect()
+                || Error<bool>();
+
+
+
+        bool ParseFilter() 
+        {
+            if(CurrToken == Token.ReservedWord 
+                && NextToken == Token.Equals 
+                && CurrSpan.Match(_source, "$filter")) 
+            {
+                Next();
+                Next();
+
+                Spec.Filter = ParseNode();
+                
+                return true;
+            }
+
+            return false;
+        }
+
+
+        bool ParseSelect() {
+            return false;
+        }
+
+
+
+
+
 
         void ParseFragment() {
             //...
@@ -288,7 +234,7 @@ namespace Parser
 
         ISegment Parse_FunctionSegment() {
             if(CurrToken == Token.Word && NextToken == Token.Open) {
-                var name = CurrSpan;
+                var name = CurrSpan.From(_source);
 
                 Next();
 
@@ -309,7 +255,7 @@ namespace Parser
         {
             if(CurrToken == Token.Word) 
             {
-                var name = CurrSpan;
+                var name = CurrSpan.From(_source);
 
                 Next();
 
@@ -360,19 +306,140 @@ namespace Parser
 
 
 
-        INode ParseNode()
-            => ParseConstant()
-                ?? Error<INode>();
+        INode ParseNode() { 
+            var node = ParseGroup()                             //start our parsing
+                        ?? ParseValue()
+                        ?? ParseAccessor(parentNode: null)
+                        ?? Error<INode>();
+
+            while(true) {
+                var next = ParseBinary(node)                    //greedily parse forwards
+                            ?? ParseNavigation(node)
+                            ?? ParseCall(node)
+                            ?? Null<INode>();
+
+                if(next != null) {
+                    node = next;
+                }
+                else {
+                    return node;
+                }
+            }
+        }
+        
+
+        
+        INode ParseCall(INode leftNode) {
+            if(CurrToken == Token.Open) {
+                var args = ParseArgs();
+                return new FunctionCallNode(leftNode, args);
+            }
+
+            return null;
+        }
+
+
+        INode ParseNavigation(INode leftNode) {
+            if(CurrToken == Token.Slash) {
+                Next();
+                return ParseAccessor(leftNode);
+            }
+
+            return null;
+        }
 
 
 
-        INode ParseConstant()
+        INode ParseAccessor(INode parentNode) {
+            if(CurrToken == Token.Word) {
+                var node = new AccessorNode(parentNode, CurrAsString());
+
+                Next();
+
+                return node;
+            }
+
+            return null;
+        }
+
+
+
+
+        Operator GetOperator(string name) {
+            switch(name) {
+                case "eq": return Operator.Equals;
+                case "ne": return Operator.NotEquals;
+                case "gt": return Operator.GreaterThan;
+                case "lt": return Operator.LessThan;
+                case "and": return Operator.And;
+                case "or": return Operator.Or;
+                default: throw new NotImplementedException();
+            }
+        }
+        
+
+        INode ParseBinary(INode leftNode) {
+            if(CurrToken == Token.Space && NextToken == Token.Word) 
+            {
+                Next();
+                var op = GetOperator(CurrAsString());
+
+                Next();
+                CurrToken.MustBe(Token.Space);
+
+                Next();
+                var rightNode = ParseNode();
+
+                return new BinaryOperatorNode(op, leftNode, rightNode);
+            }
+
+            return null;
+        }
+        
+
+        INode ParseGroup() {
+            if(CurrToken == Token.Open) {
+                Next();
+                var inner = ParseNode();
+
+                CurrToken.MustBe(Token.Close);
+                Next();
+
+                return inner;
+            }
+
+            return null;
+        }
+
+
+
+
+
+        INode ParseValue()
             => ParseString()
                 ?? ParseInteger()
+                ?? ParseBoolean()
                 ?? Null<INode>();
 
 
         
+
+        INode ParseBoolean() {
+            if(CurrToken == Token.Word) {                
+                if(CurrSpan.Match(_source, "true")) {
+                    Next();
+                    return new ValueNode<bool>(true);
+                }
+
+                if(CurrSpan.Match(_source, "false")) {
+                    Next();
+                    return new ValueNode<bool>(false);
+                }
+            }
+
+            return null;
+        }
+
 
         INode ParseString() 
         {
@@ -382,7 +449,7 @@ namespace Parser
 
                 Next();
 
-                return new StringNode(@string);
+                return new ValueNode<string>(@string.From(_source));
             }
 
             return null;
@@ -394,10 +461,11 @@ namespace Parser
         {
             if(CurrToken == Token.Number) 
             {
-                var number = CurrSpan;
+                var @int = int.Parse(CurrSpan.From(_source));
+
                 Next();
 
-                return new IntegerNode(number);
+                return new ValueNode<int>(@int);
             }
 
             return null;
@@ -407,32 +475,7 @@ namespace Parser
 
 
 
-
-
-        INode ParseNode_FromWord() {
-            if(CurrSpan.Token != Token.Word) return null;
-            throw new NotImplementedException();
-        }
-
-        INode ParseNode_FromString() {
-            if(CurrSpan.Token != Token.String) return null;
-            
-            var node = new StringNode(CurrSpan);
-
-            Next();
-
-            return node;
-        }
-
-
-
-
-
-
-        //static IStage ParseStage_FromOption(Context x) {
-        //    if(x.Current.Token != Token.)
-        //}
-
+        
 
 
         static T Null<T>()
@@ -443,81 +486,7 @@ namespace Parser
         static T Error<T>()
             => throw new InvalidOperationException($"No parsing strategy available!");
 
-        
-        
-
-
-
-
-
-
-
-
-        //public static IEnumerable<Span<StageType>> Stagify(IEnumerable<Span<Token>> tokens)
-        //    => throw new NotImplementedException();
-
-
-        //public static IEnumerable<QueryOption> ParseOptions(string source)
-        //    => ParseOptions(Lexer.Lex(source), source);
-        
-
-
-        //class Context
-        //{
-        //    readonly IEnumerator<Span<Token>> _en;
-        //    readonly string _source;
-
-        //    public Context(IEnumerable<Span<Token>> en, string source) {
-        //        _en = en.GetEnumerator();
-        //        _source = source;
-        //    }
-
-        //    public Span<Token> Current { get; private set; }
-
-        //    public Span<Token> Shift() {
-        //        throw new NotImplementedException();
-        //    }
-        //}
-
-
-
-        //static IEnumerable<QueryOption> ParseOptions(IEnumerable<Span<Token>> spans, string source) 
-        //{
-        //    var cursor = spans.GetEnumerator();
-        //    var stack = new Stack<Span<Token>>(64);
-
-        //    while(true) {
-        //        var curr = cursor.Current;
-
-        //        switch(curr.Token) {
-        //            case Token.Open:
-        //                stack.Push(curr);
-        //                cursor.MoveNext();
-        //                break;
-
-        //            case Token.Close:
-        //                stack.Pop();
-        //                //and now emit our nice node
-        //                break;
-
-        //            case Token.End:
-        //                return null;
-
-                                            
-        //            //so we accumulate context
-        //            //but don't we also accumulate payload? Nope - context isn't just on the top of the stack; its in the parser's current mode
-        //            //or - its in the context of the function doing the parsing. Each function, when we're in it, represents a separate node-building-in-process,
-        //            //with whatever local variables it needs.
-                    
-        //            //
-
-                    
-        //        }                
-        //    }            
-        //}
-
-        
-     
+             
     }
 
     

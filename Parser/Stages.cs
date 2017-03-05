@@ -21,11 +21,11 @@ namespace Parser
 
     public class SubsetSegment : ISegment
     {
-        public SubsetSegment(Span name) {
-            Name = name;
-        }
+        public readonly string Name;
 
-        public Span Name { get; private set; }
+        public SubsetSegment(string name) {
+            Name = name;
+        }        
     }
 
 
@@ -33,14 +33,13 @@ namespace Parser
 
     public class FunctionSegment : ISegment
     {
-        public FunctionSegment(Span name, IEnumerable<INode> args) {
+        public readonly string Name;
+        public readonly IEnumerable<INode> Args;
+
+        public FunctionSegment(string name, IEnumerable<INode> args) {
             Name = name;
             Args = args;
         }
-
-        public Span Name { get; private set; }
-        public IEnumerable<INode> Args { get; private set; }
-
     }
 
 

@@ -59,6 +59,10 @@ namespace Parser
         public static string From(this TokenSpan span, string source)
             => source.Substring(span.Left, span.Right - span.Left);         //but what about handling percent-encodings?
                                                                             //we'll need to manually populate a new string(n)
+
+        public static bool Match(this TokenSpan span, string from, string comp)
+            => string.Compare(from, span.Left, comp, 0, span.Right - span.Left) == 0;
+
     }
 
 
