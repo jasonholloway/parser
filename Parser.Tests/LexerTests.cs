@@ -145,6 +145,27 @@ namespace Parser.Tests
         }
 
 
+
+        [Fact(DisplayName = "Lexes minus sign as negative")]
+        public void Lexes_Minus() 
+        {
+            var spans = Lexer.Lex("-13 add -Blah").ToArray();
+
+            Assert.Equal(spans,
+                        new[] {
+                            TokenSpan.Of(Token.Start, 0, 0),
+                            TokenSpan.Of(Token.Minus, 0, 1),
+                            TokenSpan.Of(Token.Number, 1, 3),
+                            TokenSpan.Of(Token.Space, 3, 4),
+                            TokenSpan.Of(Token.Word, 4, 7),
+                            TokenSpan.Of(Token.Space, 7, 8),
+                            TokenSpan.Of(Token.Minus, 8, 9),                            
+                            TokenSpan.Of(Token.Word, 9, 13),
+                            TokenSpan.Of(Token.End, 13, 13)
+                        });
+        }
+
+
     }
 
 

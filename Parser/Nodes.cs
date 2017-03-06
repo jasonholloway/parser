@@ -14,13 +14,13 @@ namespace Parser
         }
     }
     
-    public class UnaryNode : INode
+    public class UnaryOperatorNode : INode
     {
-        public readonly Operator Operation;
+        public readonly Operator Operator;
         public readonly INode Node;
 
-        public UnaryNode(Operator op, INode node) {
-            Operation = op;
+        public UnaryOperatorNode(Operator op, INode node) {
+            Operator = op;
             Node = node;
         }
     }
@@ -70,7 +70,8 @@ namespace Parser
     public enum Operator
     {
         //Unary
-        //...
+        Not,
+        Negate,
 
         //Binary
         Equals,

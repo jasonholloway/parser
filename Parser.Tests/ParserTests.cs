@@ -108,6 +108,31 @@ namespace Parser.Tests
         }
 
 
+        [Fact(DisplayName = "Parses unary operators")]
+        public void Parses_Unary_Operators() {
+            var parsed = Parser.Parse("?$filter=not (-Length eq -1) and true");
+
+            parsed.Path.ShouldBeEmpty();
+
+            var andNode = parsed.Filter.ShouldBeOfType<BinaryOperatorNode>();
+            andNode.Operator.ShouldBe(Operator.And);
+
+            var trueNode = andNode.Right.ShouldBeOfType<ValueNode<bool>>();
+            trueNode.Value.ShouldBeTrue();
+
+            var notNode = andNode.Left.ShouldBeOfType<UnaryOperatorNode>();
+            notNode.Operator.ShouldBe(Operator.Not);
+
+            var eqNode = notNode.Node.ShouldBeOfType<BinaryOperatorNode>();
+            eqNode.Right.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(-1);
+
+            var negNode = eqNode.Left.ShouldBeOfType<UnaryOperatorNode>();
+            negNode.Operator.ShouldBe(Operator.Negate);
+
+            var accessorNode = negNode.Node.ShouldBeOfType<AccessorNode>();
+            accessorNode.Name.ShouldBe("Length");            
+        }
+
 
 
 

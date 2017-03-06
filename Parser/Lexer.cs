@@ -22,6 +22,7 @@ namespace Parser
         Close,
         Slash,
         Comma,
+        Minus,
         QuestionMark,
         Hash,
         Dot,

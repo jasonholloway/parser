@@ -90,6 +90,9 @@ namespace Parser
         string CurrAsString()
             => CurrSpan.From(_source);
 
+        bool MatchCurr(string comp)
+            => CurrSpan.Match(_source, comp);
+        
         QuerySpec Spec = new QuerySpec();
 
         #endregion
@@ -308,6 +311,7 @@ namespace Parser
 
         INode ParseNode() { 
             var node = ParseGroup()                             //start our parsing
+                        ?? ParseUnary()
                         ?? ParseValue()
                         ?? ParseAccessor(parentNode: null)
                         ?? Error<INode>();
@@ -327,6 +331,23 @@ namespace Parser
             }
         }
         
+
+
+        INode ParseUnary() {
+            if(CurrToken == Token.Word) {                
+                if(MatchCurr("not")) {
+                    Next();
+                    while(CurrToken == Token.Space) Next();
+
+                    return new UnaryOperatorNode(Operator.Not, ParseNode());
+                }
+            }
+
+            //casting...
+
+            return null;
+        }
+
 
         
         INode ParseCall(INode leftNode) {
