@@ -110,7 +110,7 @@ namespace Parser.Tests
 
         [Fact(DisplayName = "Parses unary operators")]
         public void Parses_Unary_Operators() {
-            var parsed = Parser.Parse("?$filter=not (-Length eq -1) and true");
+            var parsed = Parser.Parse("?$filter=(not (-Length eq -1)) and true");
 
             parsed.Path.ShouldBeEmpty();
 

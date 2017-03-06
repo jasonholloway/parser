@@ -343,6 +343,13 @@ namespace Parser
                 }
             }
 
+            if(CurrToken == Token.Minus) {
+                Next();
+                while(CurrToken == Token.Space) Next();
+
+                return new UnaryOperatorNode(Operator.Negate, ParseNode());
+            }
+
             //casting...
 
             return null;

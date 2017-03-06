@@ -234,6 +234,7 @@ namespace Parser
                 case '&': return x.ShiftAndEmit(Token.Ampersand);
                 case '?': return x.ShiftAndEmit(Token.QuestionMark);
                 case '#': return x.ShiftAndEmit(Token.Hash);
+                case '-': return x.ShiftAndEmit(Token.Minus);
                 default:  return null;
             }
         }
