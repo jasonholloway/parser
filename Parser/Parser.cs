@@ -309,18 +309,18 @@ namespace Parser
 
 
 
-        INode ParseNode() { 
+        INode ParseNode(bool consumeBinaries = true) 
+        {
             var node = ParseGroup()                             //start our parsing
-                        ?? ParseUnary()
+                        ?? ParseUnary()                         //unaries shouldn't continue to consume binaries (or navigations, etc)
                         ?? ParseValue()
                         ?? ParseAccessor(parentNode: null)
                         ?? Error<INode>();
 
             while(true) {
-                var next = ParseBinary(node)                    //greedily parse forwards
-                            ?? ParseNavigation(node)
+                var next = ParseNavigation(node)
                             ?? ParseCall(node)
-                            ?? Null<INode>();
+                            ?? (consumeBinaries ? ParseBinary(node) : null);
 
                 if(next != null) {
                     node = next;
@@ -333,13 +333,13 @@ namespace Parser
         
 
 
-        INode ParseUnary() {
+        INode ParseUnary() {            
             if(CurrToken == Token.Word) {                
                 if(MatchCurr("not")) {
                     Next();
                     while(CurrToken == Token.Space) Next();
 
-                    return new UnaryOperatorNode(Operator.Not, ParseNode());
+                    return new UnaryOperatorNode(Operator.Not, ParseNode(consumeBinaries: false));
                 }
             }
 
@@ -347,7 +347,7 @@ namespace Parser
                 Next();
                 while(CurrToken == Token.Space) Next();
 
-                return new UnaryOperatorNode(Operator.Negate, ParseNode());
+                return new UnaryOperatorNode(Operator.Negate, ParseNode(consumeBinaries: false));
             }
 
             //casting...
@@ -355,8 +355,9 @@ namespace Parser
             return null;
         }
 
-
         
+
+
         INode ParseCall(INode leftNode) {
             if(CurrToken == Token.Open) {
                 var args = ParseArgs();

@@ -110,7 +110,7 @@ namespace Parser.Tests
 
         [Fact(DisplayName = "Parses unary operators")]
         public void Parses_Unary_Operators() {
-            var parsed = Parser.Parse("?$filter=(not (-Length eq -1)) and true");
+            var parsed = Parser.Parse("?$filter=not (-Length eq -1) and true");
 
             parsed.Path.ShouldBeEmpty();
 
@@ -124,14 +124,27 @@ namespace Parser.Tests
             notNode.Operator.ShouldBe(Operator.Not);
 
             var eqNode = notNode.Node.ShouldBeOfType<BinaryOperatorNode>();
-            eqNode.Right.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(-1);
 
             var negNode = eqNode.Left.ShouldBeOfType<UnaryOperatorNode>();
             negNode.Operator.ShouldBe(Operator.Negate);
 
+            var negNode2 = eqNode.Right.ShouldBeOfType<UnaryOperatorNode>();
+            negNode2.Operator.ShouldBe(Operator.Negate);
+            negNode2.Node.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(1);
+
             var accessorNode = negNode.Node.ShouldBeOfType<AccessorNode>();
-            accessorNode.Name.ShouldBe("Length");            
+            accessorNode.Name.ShouldBe("Length");
+            accessorNode.Parent.ShouldBeNull();
         }
+
+        //the parser must have modes
+        //it must know whether to consume binaries when paring a unary, and vice versa
+        //and this mode must live on a poppable stack, as the modes will be nested
+
+        //the mode is generally provided by the looping function:
+        //so we need a separate loop for parsing unaries and binaries
+        //the unary will try to take binary continuations, 
+
 
 
 
