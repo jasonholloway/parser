@@ -129,9 +129,9 @@ namespace Parser
                 => RemainingCount == 0 && Start >= SourceLength;
 
 
-            public TokenSpan Emit(Token type, int leftOffset = 0, int rightOffset = 0) 
+            public TokenSpan Emit(Token type, int? left = null) 
             {                                
-                var token = TokenSpan.Of(type, Start + leftOffset, Last + rightOffset); //bad!!!!!!! - instead of bodging the span, should skip chars and lookahead in lexing
+                var token = TokenSpan.Of(type, left ?? Start, Last);
                 Start = Last;
                 return token;
             }
@@ -185,11 +185,13 @@ namespace Parser
         {
             if(!x.Char.IsQuoteMark()) return null;
 
+            var start = x.Start;
+
             while(true) {
                 if(x.Shift().IsQuoteMark() && !x.Shift().IsQuoteMark()) break;
             }
             
-            return x.Emit(Token.String, 1, -1);
+            return x.Emit(Token.String, start);
         }
 
         static TokenSpan? LexHeading(Context x) 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Shouldly;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -105,7 +106,7 @@ namespace Parser.Tests
 
 
 
-        [Fact]
+        [Fact(DisplayName = "Lexes % encodings #1")]
         public void OptionsLexing_Handles_PercentEncodings1() 
         {
             var spans = Lexer.Lex("(%27Hello%27)").ToArray();
@@ -114,7 +115,7 @@ namespace Parser.Tests
                         new[] {
                             TokenSpan.Of(Token.Start, 0, 0),
                             TokenSpan.Of(Token.Open, 0, 1),
-                            TokenSpan.Of(Token.String, 4, 9),
+                            TokenSpan.Of(Token.String, 2, 11),
                             TokenSpan.Of(Token.Close, 12, 13),
                             TokenSpan.Of(Token.End, 13, 13)
                         });
@@ -123,7 +124,7 @@ namespace Parser.Tests
 
 
 
-        [Fact]
+        [Fact(DisplayName = "Lexes % encodings #2")]
         public void OptionsLexing_Handles_PercentEncodings2() 
         {
             var spans = Lexer.Lex("$filter=%28Surname eq %27O%27%27Brien%27%29").ToArray();
@@ -138,10 +139,22 @@ namespace Parser.Tests
                             TokenSpan.Of(Token.Space, 18, 19),
                             TokenSpan.Of(Token.Word, 19, 21),
                             TokenSpan.Of(Token.Space, 21, 22),
-                            TokenSpan.Of(Token.String, 25, 37),
+                            TokenSpan.Of(Token.String, 22, 40),
                             TokenSpan.Of(Token.Close, 40, 43),
                             TokenSpan.Of(Token.End, 43, 43)
                         });
+        }
+
+
+        [Fact(DisplayName = "Lexes strings with percents")]
+        public void Lexes_String_WithPercents() {
+            var spans = Lexer.Lex($"%27Blah%27").ToArray();
+
+            spans.ShouldBe(new[] {
+                TokenSpan.Of(Token.Start, 0, 0),
+                TokenSpan.Of(Token.String, 0, 10),
+                TokenSpan.Of(Token.End, 10, 10)
+            });
         }
 
 
