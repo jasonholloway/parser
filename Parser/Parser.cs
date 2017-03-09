@@ -343,7 +343,7 @@ namespace Parser
                 }
             }
 
-            if(CurrToken == Token.Minus) {
+            if(CurrToken == Token.Hyphen) {
                 Next();
                 while(CurrToken == Token.Space) Next();
 

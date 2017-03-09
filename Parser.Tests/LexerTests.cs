@@ -155,6 +155,29 @@ namespace Parser.Tests
             });
         }
 
+                
+
+        [Fact(DisplayName = "Lexes dates as sequences of tokens, to be parsed into date values later")]
+        public void Lexes_Dates() {
+            var spans = Lexer.Lex($"2012-05-29T09:13:28").ToArray();
+            
+            spans.ShouldBe(new[] {
+                TokenSpan.Of(Token.Start, 0, 0),
+                TokenSpan.Of(Token.Number, 0, 4),
+                TokenSpan.Of(Token.Hyphen, 4, 5),
+                TokenSpan.Of(Token.Number, 5, 7),
+                TokenSpan.Of(Token.Hyphen, 7, 8),
+                TokenSpan.Of(Token.Number, 8, 10),
+                TokenSpan.Of(Token.Word, 10, 11),
+                TokenSpan.Of(Token.Number, 11, 13),
+                TokenSpan.Of(Token.Colon, 13, 14),
+                TokenSpan.Of(Token.Number, 14, 16),
+                TokenSpan.Of(Token.Colon, 16, 17),
+                TokenSpan.Of(Token.Number, 17, 19),
+                TokenSpan.Of(Token.End, 19, 19)
+            });
+        }
+
 
 
         [Fact(DisplayName = "Lexes minus sign as negative")]
@@ -165,12 +188,12 @@ namespace Parser.Tests
             Assert.Equal(spans,
                         new[] {
                             TokenSpan.Of(Token.Start, 0, 0),
-                            TokenSpan.Of(Token.Minus, 0, 1),
+                            TokenSpan.Of(Token.Hyphen, 0, 1),
                             TokenSpan.Of(Token.Number, 1, 3),
                             TokenSpan.Of(Token.Space, 3, 4),
                             TokenSpan.Of(Token.Word, 4, 7),
                             TokenSpan.Of(Token.Space, 7, 8),
-                            TokenSpan.Of(Token.Minus, 8, 9),                            
+                            TokenSpan.Of(Token.Hyphen, 8, 9),                            
                             TokenSpan.Of(Token.Word, 9, 13),
                             TokenSpan.Of(Token.End, 13, 13)
                         });

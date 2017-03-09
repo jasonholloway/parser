@@ -22,6 +22,8 @@ namespace Parser
         Open,
         Close,
         Slash,
+        Hyphen,
+        Colon,
         Comma,
         Minus,
         QuestionMark,
@@ -42,7 +44,7 @@ namespace Parser
             => c == '\'' || c == '"';
 
         public static bool IsWordChar(this char c)
-            => (c >= 'A' && c <= 'z') || c.IsNumber();
+            => (c >= 'A' && c <= 'z');
 
         public static bool IsWhitespace(this char c)
             => c == ' ';
@@ -160,7 +162,7 @@ namespace Parser
         {
             if(!x.Char.IsNumber()) return null;
 
-            while(x.NextChar.IsNumber()) x.Shift(); //but also beware dates, and of course decimals
+            while(x.NextChar.IsNumber()) x.Shift();
             
             return x.Emit(Token.Number);            
         }
@@ -223,10 +225,11 @@ namespace Parser
                 case '=': return x.Emit(Token.Equals);
                 case '(': return x.Emit(Token.Open);
                 case ')': return x.Emit(Token.Close);
+                case ':': return x.Emit(Token.Colon);
+                case '-': return x.Emit(Token.Hyphen);
                 case '&': return x.Emit(Token.Ampersand);
                 case '?': return x.Emit(Token.QuestionMark);
                 case '#': return x.Emit(Token.Hash);
-                case '-': return x.Emit(Token.Minus);
                 default:  return null;
             }
         }

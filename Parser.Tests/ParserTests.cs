@@ -108,6 +108,61 @@ namespace Parser.Tests
         }
 
 
+
+        [Fact(DisplayName = "Accessor names include contiguous numbers")]
+        public void NumbersInNames() {
+            throw new NotImplementedException();
+        }
+
+
+
+
+        [Fact(DisplayName = "V4 Dates parsed")]
+        public void Parses_V4_Dates() {
+            var parsed = Parser.Parse("?$filter=Date gt 2012-05-29T09:13:28.123Z");
+
+            var gtNode = parsed.Filter.ShouldBeOfType<BinaryOperatorNode>();
+            gtNode.Operator.ShouldBe(Operator.GreaterThan);
+
+            var leftNode = gtNode.Left.ShouldBeOfType<AccessorNode>();
+            leftNode.Name.ShouldBe("Date");
+            
+            var rightNode = gtNode.Right.ShouldBeOfType<ValueNode<DateTime>>();
+            rightNode.Value.Year.ShouldBe(2012);
+            rightNode.Value.Month.ShouldBe(5);
+            rightNode.Value.Day.ShouldBe(29);
+            rightNode.Value.Hour.ShouldBe(9);
+            rightNode.Value.Minute.ShouldBe(13);
+            rightNode.Value.Second.ShouldBe(28);
+            rightNode.Value.Millisecond.ShouldBe(123);
+        }
+
+
+
+        [Fact(DisplayName = "V3 Dates parsed")]
+        public void Parses_V3_Dates() {
+            var parsed = Parser.Parse("?$filter=Date ge datetime'2012-05-29T09:13:28.123");
+
+            var gtNode = parsed.Filter.ShouldBeOfType<BinaryOperatorNode>();
+            gtNode.Operator.ShouldBe(Operator.GreaterThan);
+
+            var leftNode = gtNode.Left.ShouldBeOfType<AccessorNode>();
+            leftNode.Name.ShouldBe("Date");
+
+            var rightNode = gtNode.Right.ShouldBeOfType<ValueNode<DateTime>>();
+            rightNode.Value.Year.ShouldBe(2012);
+            rightNode.Value.Month.ShouldBe(5);
+            rightNode.Value.Day.ShouldBe(29);
+            rightNode.Value.Hour.ShouldBe(9);
+            rightNode.Value.Minute.ShouldBe(13);
+            rightNode.Value.Second.ShouldBe(28);
+            rightNode.Value.Millisecond.ShouldBe(123);
+        }
+
+
+
+
+
         [Fact(DisplayName = "Parses unary operators")]
         public void Parses_Unary_Operators() {
             var parsed = Parser.Parse("?$filter=not (-Length eq -1) and true");
