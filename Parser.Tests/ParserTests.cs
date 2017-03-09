@@ -22,7 +22,7 @@ namespace Parser.Tests
             stage2.Name.ShouldBe("Chihuahuas");
         }
 
-        
+                
 
 
         [Fact(DisplayName = "Parses function segments & args")]

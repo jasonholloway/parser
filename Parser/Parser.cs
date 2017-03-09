@@ -87,8 +87,8 @@ namespace Parser
         Token CurrToken => CurrSpan.Token;
         Token NextToken => NextSpan.Token;
 
-        string CurrAsString()
-            => CurrSpan.From(_source);
+        //string CurrAsString()
+        //    => CurrSpan.From(_source);
 
         bool MatchCurr(string comp)
             => CurrSpan.Match(_source, comp);
@@ -381,7 +381,7 @@ namespace Parser
 
         INode ParseAccessor(INode parentNode) {
             if(CurrToken == Token.Word) {
-                var node = new AccessorNode(parentNode, CurrAsString());
+                var node = new AccessorNode(parentNode, CurrSpan.From(_source));
 
                 Next();
 
@@ -411,7 +411,7 @@ namespace Parser
             if(CurrToken == Token.Space && NextToken == Token.Word) 
             {
                 Next();
-                var op = GetOperator(CurrAsString());
+                var op = GetOperator(CurrSpan.From(_source));
 
                 Next();
                 CurrToken.MustBe(Token.Space);

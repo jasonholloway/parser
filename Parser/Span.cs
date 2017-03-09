@@ -21,16 +21,19 @@ namespace Parser
 
     public struct TokenSpan
     {
-        public readonly Token Token;
         public readonly int Left;
         public readonly int Right;
+        public readonly Token Token;
 
         public TokenSpan(Token token, int left, int right) {
-            Token = token;
             Left = left;
             Right = right;
+            Token = token;
         }
 
+
+        public int Size => Right - Left;
+        
         
         static public implicit operator Span(TokenSpan inp)
             => new Span(inp.Left, inp.Right);
@@ -53,12 +56,33 @@ namespace Parser
 
     public static class SpanExtensions
     {
-        public static string From(this Span span, string source)
-            => source.Substring(span.Left, span.Right - span.Left);
+        //public static string From(this Span span, string source)
+        //    => source.Substring(span.Left, span.Right - span.Left);
 
-        public static string From(this TokenSpan span, string source)
-            => source.Substring(span.Left, span.Right - span.Left);         //but what about handling percent-encodings?
-                                                                            //we'll need to manually populate a new string(n)
+
+
+
+        public static string From(this TokenSpan span, string source) 
+        {
+            var sb = new StringBuilder(span.Size);
+
+            switch(span.Token) {
+                case Token.String:
+                    break;
+
+                default:
+                    return source.Substring(span.Left, span.Right - span.Left);         //instead of substring here, need to walk through chars
+            }
+
+            return sb.ToString();
+        }
+
+
+        
+
+
+
+
 
         public static bool Match(this TokenSpan span, string from, string comp)
             => string.Compare(from, span.Left, comp, 0, span.Right - span.Left) == 0;

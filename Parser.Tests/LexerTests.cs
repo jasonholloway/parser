@@ -16,17 +16,16 @@ namespace Parser.Tests
         {
             var spans = Lexer.Lex("Dogs/Chihuahuas('Boris')").ToArray();
 
-            Assert.Equal(spans,
-                new[] {
-                    TokenSpan.Of(Token.Start, 0, 0),
-                    TokenSpan.Of(Token.Word, 0, 4),
-                    TokenSpan.Of(Token.Slash, 4, 5),
-                    TokenSpan.Of(Token.Word, 5, 15),
-                    TokenSpan.Of(Token.Open, 15, 16),
-                    TokenSpan.Of(Token.String, 17, 22),
-                    TokenSpan.Of(Token.Close, 23, 24),
-                    TokenSpan.Of(Token.End, 24, 24)
-                });
+            spans.ShouldBe(new[] {
+                TokenSpan.Of(Token.Start, 0, 0),
+                TokenSpan.Of(Token.Word, 0, 4),
+                TokenSpan.Of(Token.Slash, 4, 5),
+                TokenSpan.Of(Token.Word, 5, 15),
+                TokenSpan.Of(Token.Open, 15, 16),
+                TokenSpan.Of(Token.String, 16, 23),
+                TokenSpan.Of(Token.Close, 23, 24),
+                TokenSpan.Of(Token.End, 24, 24)
+            });
         }
 
 
@@ -38,18 +37,17 @@ namespace Parser.Tests
         {
             var spans = Lexer.Lex("$filter=name eq 'Boris'").ToArray();
 
-            Assert.Equal(spans,
-                        new[] {
-                            TokenSpan.Of(Token.Start, 0, 0),
-                            TokenSpan.Of(Token.ReservedWord, 0, 7),
-                            TokenSpan.Of(Token.Equals, 7, 8),
-                            TokenSpan.Of(Token.Word, 8, 12),
-                            TokenSpan.Of(Token.Space, 12, 13),
-                            TokenSpan.Of(Token.Word, 13, 15),
-                            TokenSpan.Of(Token.Space, 15, 16),
-                            TokenSpan.Of(Token.String, 17, 22),
-                            TokenSpan.Of(Token.End, 23, 23)
-                        });
+            spans.ShouldBe(new[] {
+                TokenSpan.Of(Token.Start, 0, 0),
+                TokenSpan.Of(Token.ReservedWord, 0, 7),
+                TokenSpan.Of(Token.Equals, 7, 8),
+                TokenSpan.Of(Token.Word, 8, 12),
+                TokenSpan.Of(Token.Space, 12, 13),
+                TokenSpan.Of(Token.Word, 13, 15),
+                TokenSpan.Of(Token.Space, 15, 16),
+                TokenSpan.Of(Token.String, 16, 23),
+                TokenSpan.Of(Token.End, 23, 23)
+            });
         }
 
 
@@ -85,7 +83,7 @@ namespace Parser.Tests
         }
 
 
-        [Fact]
+        [Fact(DisplayName = "Lexer handles quote marks in strings")]
         public void OptionsLexing_Handles_QuoteMarksInStrings() 
         {
             var spans = Lexer.Lex("$filter=Surname eq 'O''Brien'").ToArray();
@@ -99,7 +97,7 @@ namespace Parser.Tests
                             TokenSpan.Of(Token.Space, 15, 16),
                             TokenSpan.Of(Token.Word, 16, 18),
                             TokenSpan.Of(Token.Space, 18, 19),
-                            TokenSpan.Of(Token.String, 20, 28),
+                            TokenSpan.Of(Token.String, 19, 29),
                             TokenSpan.Of(Token.End, 29, 29)
                         });
         }
@@ -115,7 +113,7 @@ namespace Parser.Tests
                         new[] {
                             TokenSpan.Of(Token.Start, 0, 0),
                             TokenSpan.Of(Token.Open, 0, 1),
-                            TokenSpan.Of(Token.String, 2, 11),
+                            TokenSpan.Of(Token.String, 1, 12),
                             TokenSpan.Of(Token.Close, 12, 13),
                             TokenSpan.Of(Token.End, 13, 13)
                         });

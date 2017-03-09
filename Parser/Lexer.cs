@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -70,77 +71,61 @@ namespace Parser
 
 
 
+
     public static class Lexer
     {
         
         class Context
         {
+            public CharReader Reader { get; private set; }
+
             public string Source { get; private set; }
-            public int SourceLength { get; private set; }
-            public int RemainingCount { get; private set; }
 
-            public int Start { get; private set; }
-            public int Last { get; private set; }
-            public int Next { get; private set; }
-
-            public char Char { get; private set; }
+            public int Left { get; private set; }
+            public int Right { get; private set; }
             
+            public char Char { get; private set; }
+            public char NextChar { get; private set; }
+
 
             public Context(string source) 
             {
                 Source = source;
-                SourceLength = Source.Length;
-                RemainingCount = SourceLength;
 
-                Start = Next = Last = 0;
-                Char = SourceLength == 0 ? (char)0 : Source[0];
+                Reader = new CharReader(source);
+
+                Left = Right = Reader.ReadStart;
             }
             
 
             public char Shift() 
             {
-                Last = Next;
+                Char = NextChar;
+                
+                Reader.MoveNext();
+                
+                Right = Reader.ReadStart;
 
-                if(RemainingCount > 0) {
-                    RemainingCount--;
-                    if(RemainingCount < 0) throw new InvalidOperationException("Parsed past end of string!");
+                NextChar = Reader.Current;
 
-                    Char = Source[Next++];
-
-                    if(Char == '%') {
-                        RemainingCount -= 2;
-                        if(RemainingCount < 0) throw new InvalidOperationException("Parsed past end of string!");
-
-                        var nibble1 = Source[Next++];
-                        var nibble2 = Source[Next++];
-                        Char = (char)((nibble1.DecodeAsHex() << 4) + (nibble2.DecodeAsHex()));
-                    }
-                    
-                    return Char;
-                }
-                else {
-                    Next++;
-                    return Char = (char)0; //null terminals not exposed normally
-                }
+                return Char;
             }
-            
-
-            public bool AtEnd 
-                => RemainingCount == 0 && Start >= SourceLength;
 
 
-            public TokenSpan Emit(Token type, int? left = null) 
-            {                                
-                var token = TokenSpan.Of(type, left ?? Start, Last);
-                Start = Last;
+            public bool AtEnd => Char == 0;
+
+
+            public TokenSpan Emit(Token type) 
+            {
+                var token = TokenSpan.Of(type, Left, Right);
+
+                Left = Right;
+
+                Shift();
+
                 return token;
             }
-             
-            public TokenSpan ShiftAndEmit(Token type) {
-                Shift();
-                return Emit(type);
-            }
-                      
+                                   
         }
 
 
@@ -154,9 +139,9 @@ namespace Parser
 
         static IEnumerable<TokenSpan> Lex(Context x) 
         {
-            x.Shift();
-
             yield return x.Emit(Token.Start);
+
+            x.Shift();
             
             while(!x.AtEnd) {
                 yield return (TokenSpan)(LexSpace(x)
@@ -164,7 +149,7 @@ namespace Parser
                                             ?? LexNumeric(x)
                                             ?? LexString(x)
                                             ?? LexWord(x)
-                                            ?? LexHeading(x));  
+                                            ?? LexReservedWord(x));  
             }
             
             yield return x.Emit(Token.End);
@@ -175,7 +160,7 @@ namespace Parser
         {
             if(!x.Char.IsNumber()) return null;
 
-            while(x.Shift().IsNumber()) { } //but also beware dates
+            while(x.NextChar.IsNumber()) x.Shift(); //but also beware dates, and of course decimals
             
             return x.Emit(Token.Number);            
         }
@@ -184,23 +169,28 @@ namespace Parser
         static TokenSpan? LexString(Context x) 
         {
             if(!x.Char.IsQuoteMark()) return null;
-
-            var start = x.Start;
-
+            
             while(true) {
-                if(x.Shift().IsQuoteMark() && !x.Shift().IsQuoteMark()) break;
+                if(x.Shift().IsQuoteMark()) {
+                    if(x.NextChar.IsQuoteMark()) {
+                        x.Shift();
+                    }
+                    else {
+                        break;
+                    }
+                }
             }
             
-            return x.Emit(Token.String, start);
+            return x.Emit(Token.String);
         }
 
-        static TokenSpan? LexHeading(Context x) 
+        static TokenSpan? LexReservedWord(Context x) 
         {
             if(x.Char != '$') return null;
 
             x.Shift(); //skip '$'
 
-            while(x.Shift().IsWordChar()) { }
+            while(x.NextChar.IsWordChar()) x.Shift();
             
             return x.Emit(Token.ReservedWord);
         }
@@ -209,7 +199,7 @@ namespace Parser
         {
             if(!x.Char.IsWordChar()) return null;
 
-            while(x.Shift().IsWordChar()) { }
+            while(x.NextChar.IsWordChar()) x.Shift();
             
             return x.Emit(Token.Word);
         }
@@ -218,7 +208,7 @@ namespace Parser
         {
             if(!x.Char.IsWhitespace()) return null;
 
-            while(x.Shift().IsWhitespace()) { }
+            while(x.NextChar.IsWhitespace()) x.Shift();
             
             return x.Emit(Token.Space);
         }
@@ -227,16 +217,16 @@ namespace Parser
         static TokenSpan? LexChars(Context x) 
         {
             switch(x.Char) {
-                case '/': return x.ShiftAndEmit(Token.Slash);
-                case ',': return x.ShiftAndEmit(Token.Comma);
-                case '.': return x.ShiftAndEmit(Token.Dot);
-                case '=': return x.ShiftAndEmit(Token.Equals);
-                case '(': return x.ShiftAndEmit(Token.Open);
-                case ')': return x.ShiftAndEmit(Token.Close);
-                case '&': return x.ShiftAndEmit(Token.Ampersand);
-                case '?': return x.ShiftAndEmit(Token.QuestionMark);
-                case '#': return x.ShiftAndEmit(Token.Hash);
-                case '-': return x.ShiftAndEmit(Token.Minus);
+                case '/': return x.Emit(Token.Slash);
+                case ',': return x.Emit(Token.Comma);
+                case '.': return x.Emit(Token.Dot);
+                case '=': return x.Emit(Token.Equals);
+                case '(': return x.Emit(Token.Open);
+                case ')': return x.Emit(Token.Close);
+                case '&': return x.Emit(Token.Ampersand);
+                case '?': return x.Emit(Token.QuestionMark);
+                case '#': return x.Emit(Token.Hash);
+                case '-': return x.Emit(Token.Minus);
                 default:  return null;
             }
         }
