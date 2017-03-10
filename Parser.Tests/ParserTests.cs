@@ -323,6 +323,28 @@ namespace Parser.Tests
 
 
 
+
+        [Fact(DisplayName = "Navigation precedence")]
+        public void Navigation_Precedence() {
+            var parsed = Parser.Parse("root/num() mul root/num");
+
+            var mulNode = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            mulNode.Operator.ShouldBe(Operator.Multiply);
+
+            mulNode.Left.ShouldBeOfType<CallNode>()
+                        .Function.ShouldBeOfType<AccessorNode>()
+                            .Parent.ShouldBeOfType<AccessorNode>();
+
+            mulNode.Right.ShouldBeOfType<AccessorNode>()
+                        .Parent.ShouldBeOfType<AccessorNode>();
+        }
+
+
+
+
+
+
+
         [Fact(DisplayName = "Parses GUIDs")]
         public void Parses_Guids() {
             throw new NotImplementedException();
