@@ -6,20 +6,7 @@ using System.Text;
 
 namespace Parser
 {
-    
-    public class Query : INode
-    {
-        public readonly INode Resource;
-        public readonly IReadOnlyList<INode> Options;
-                
-        public Query(INode path, IReadOnlyList<INode> options) {
-            Resource = path;
-            Options = options;
-        }
-    }
-
-
-    
+      
 
 
     public static class ParseExtensions
@@ -79,10 +66,10 @@ namespace Parser
         }
 
         void Skip(Token token, int size = -1, string match = null) {
-            if(CurrToken != token) throw new InvalidOperationException("Unexpected token encountered!");
+            if(CurrToken != token) throw new InvalidOperationException($"Strange token encountered: expected {token} but found {CurrToken}!");
 
-            if(match != null && !CurrSpan.Match(_source, match)) throw new InvalidOperationException("Unexpected token encountered!");
-            
+            if(match != null && !CurrSpan.Match(_source, match)) throw new InvalidOperationException($"Strange token encountered: expected {token} but found {CurrToken}!");
+
             if(size >= 0 && CurrSpan.Size != size) throw new InvalidOperationException("Unexpected token encountered!");
 
             Next();
@@ -130,60 +117,37 @@ namespace Parser
 
         
 
-        
-        Query Parse() 
-        {
-            Skip(Token.Start);            
-            
-            var path = ParseNode();
-            var options = (IReadOnlyList<INode>)new INode[0];
-
-            if(CurrToken == Token.QuestionMark) {
-                Skip(Token.QuestionMark);                
-                options = ParseOptions();
-            }
-
-            //if(CurrToken == Token.Hash) {
-            //    Next();
-            //    ParseFragment();
-            //}
-
-            Skip(Token.End);
-            
-            return new Query(path, options);
-        }
-
                 
 
-        IReadOnlyList<INode> ParseOptions() 
-        {
-            var nodes = new List<INode>();
+        //IReadOnlyList<INode> ParseOptions() 
+        //{
+        //    var nodes = new List<INode>();
 
-            while(true) {
-                switch(CurrToken) {
-                    case Token.Ampersand:
-                        Next();
-                        break;
+        //    while(true) {
+        //        switch(CurrToken) {
+        //            case Token.Ampersand:
+        //                Next();
+        //                break;
 
-                    case Token.Hash:
-                    case Token.End:
-                        return nodes;
+        //            case Token.Hash:
+        //            case Token.End:
+        //                return nodes;
 
-                    default:
-                        nodes.Add(ParseNode());                        
-                        break;
-                }
-            }
-        }
+        //            default:
+        //                nodes.Add(ParseNode());                        
+        //                break;
+        //        }
+        //    }
+        //}
 
                 
 
 
 
-        ISegment ParseSegment()
-            => Parse_FunctionSegment()
-                ?? Parse_SubsetSegment()
-                ?? Error<ISegment>();
+        //ISegment ParseSegment()
+        //    => Parse_FunctionSegment()
+        //        ?? Parse_SubsetSegment()
+        //        ?? Error<ISegment>();
 
 
 
@@ -194,38 +158,38 @@ namespace Parser
 
 
 
-        ISegment Parse_FunctionSegment() {
-            if(CurrToken == Token.Word && NextToken == Token.Open) {
-                var name = CurrSpan.AsString(_source);
+        //ISegment Parse_FunctionSegment() {
+        //    if(CurrToken == Token.Word && NextToken == Token.Open) {
+        //        var name = CurrSpan.AsString(_source);
 
-                Next();
+        //        Next();
 
-                var args = ParseArgs();
+        //        var args = ParseArgs();
 
-                return new FunctionSegment(name, args);
-            }
+        //        return new FunctionSegment(name, args);
+        //    }
 
-            return null;   //need lookahead here
-        }
-
-
+        //    return null;   //need lookahead here
+        //}
 
 
 
 
-        ISegment Parse_SubsetSegment() 
-        {
-            if(CurrToken == Token.Word) 
-            {
-                var name = CurrSpan.AsString(_source);
 
-                Next();
 
-                return new SubsetSegment(name);
-            }
+        //ISegment Parse_SubsetSegment() 
+        //{
+        //    if(CurrToken == Token.Word) 
+        //    {
+        //        var name = CurrSpan.AsString(_source);
 
-            return null;
-        }
+        //        Next();
+
+        //        return new SubsetSegment(name);
+        //    }
+
+        //    return null;
+        //}
 
 
               
@@ -270,7 +234,6 @@ namespace Parser
         enum Greed
         {
             Full            = 999,
-            Grouping        = 0,
             Primary         = 1,
             Unary           = 2,
             Multiplicative  = 3,
@@ -281,32 +244,73 @@ namespace Parser
             ConditionalOr   = 8
         }
 
+        
 
 
-        INode ParseNode() 
-        {
-            var node = ParseGroup()                             //start our parsing
-                        ?? ParseUnary()                         //unaries shouldn't continue to consume binaries (or navigations, etc)
+        INode Parse() {
+            Skip(Token.Start);
+
+            var node = ParseNode();
+            
+            Skip(Token.End);
+
+            return node;
+        }
+
+
+
+        
+
+        INode ParseNode() {
+            var node = ParseGroup()
+                        ?? ParseUnary()
                         ?? ParseValue()
-                        ?? ParseAccessor(parentNode: null)
-                        ?? ParseSymbol()
-                        ?? Null<INode>();
+                        ?? ParseAccessor(parent: null)
+                        ?? ParseSymbol();
 
-            if(node == null) return null;
+            return ParseForwards(node);
+        }
 
-            while(true) { 
-                var next = ParseNavigation(node)
-                            ?? ParseAssignment(node)
-                            ?? ParseCall(node)
-                            ?? ParseBinary(node);
 
-                if(next != null) {
-                    node = next;
-                }
-                else {
-                    return node;
-                }
+        INode ParseForwards(INode node) { 
+            var next = ParseNavigate(node)
+                        ?? ParseAssign(node)
+                        ?? ParseCall(node)
+                        ?? ParseBinary(node)
+                        ?? ParseList(node)
+                        ?? ParseOptions(node);
+
+            return next != null
+                    ? ParseForwards(next)
+                    : node;
+        }
+
+
+        
+
+        INode ParseOptions(INode leftNode) {
+            if(CurrToken == Token.QuestionMark) {
+                Skip(Token.QuestionMark);
+                
+                var options = ParseNode();
+
+                return new QueryNode(leftNode, options);
             }
+
+            return null;
+        }
+
+        
+        INode ParseList(INode leftNode) {
+            if(CurrToken == Token.Comma) {
+                Skip(Token.Comma);
+
+                var next = ParseNode();
+
+                return new ListNode(leftNode, next);
+            }
+
+            return null;
         }
 
 
@@ -383,7 +387,7 @@ namespace Parser
 
         INode ParseCall(INode leftNode) {
             if(CurrToken == Token.Open) {
-                var args = ParseArgs();
+                var args = ParseGroup();                
                 return new CallNode(leftNode, args);
             }
 
@@ -391,7 +395,7 @@ namespace Parser
         }
 
 
-        INode ParseNavigation(INode leftNode) {
+        INode ParseNavigate(INode leftNode) {
             if(CurrToken == Token.Slash) {
                 Next();
                 return ParseAccessor(leftNode); //or indeed a symbol...
@@ -402,7 +406,7 @@ namespace Parser
 
 
 
-        INode ParseAssignment(INode leftNode) {
+        INode ParseAssign(INode leftNode) {
             if(CurrToken == Token.Equals) {
                 Next();
                 var rightNode = ParseNode();
@@ -433,7 +437,7 @@ namespace Parser
         }
 
 
-        INode ParseAccessor(INode parentNode) {
+        INode ParseAccessor(INode parent) {
             if(CurrToken == Token.Word) {
                 var left = CurrSpan.Left;
                 var right = 0;
@@ -443,7 +447,7 @@ namespace Parser
                     Next();                    
                 } while(CurrToken == Token.Word || CurrToken == Token.Number);
                 
-                return new AccessorNode(parentNode, _source.Read(left, right));                
+                return new AccessorNode(parent, _source.Read(left, right));                
             }
 
             return null;

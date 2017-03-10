@@ -64,25 +64,26 @@ namespace Parser
 
     
     
-    public class OptionsNode
+    public class QueryNode : INode
     {
         public readonly INode Resource;
         public readonly INode Options;
 
-        public OptionsNode(INode resource, INode options) {
+        public QueryNode(INode resource, INode options) {
             Resource = resource;
             Options = options;
         }
     }
 
+    
 
-
+    
     public class ListNode : INode
     {
         public readonly INode Item;
-        public readonly ListNode Next;
+        public readonly INode Next;
 
-        public ListNode(INode item, ListNode next = null) {
+        public ListNode(INode item, INode next = null) {
             Item = item;
             Next = next;
         }
@@ -105,9 +106,9 @@ namespace Parser
     public class CallNode : INode
     {
         public readonly INode Function;
-        public readonly IReadOnlyList<INode> Args;
+        public readonly INode Args;
         
-        public CallNode(INode function, IReadOnlyList<INode> args) {
+        public CallNode(INode function, INode args) {
             Function = function;
             Args = args;
         }

@@ -15,7 +15,7 @@ namespace Parser.Tests
         public void Parses_Subsets() {
             var parsed = Parser.Parse("Dogs/Chihuahuas");
 
-            var node1 = parsed.Resource.ShouldBeOfType<AccessorNode>();
+            var node1 = parsed.ShouldBeOfType<AccessorNode>();
             node1.Name.ShouldBe("Chihuahuas");
 
             var node2 = node1.Parent.ShouldBeOfType<AccessorNode>();
@@ -29,16 +29,20 @@ namespace Parser.Tests
         public void Parses_Functions() {
             var parsed = Parser.Parse("Animals/Choose('Dogs','Chihuahuas')/Biggest()");
 
-            var call1 = parsed.Resource.ShouldBeOfType<CallNode>();
-            call1.Args.ShouldBeEmpty();
+            var call1 = parsed.ShouldBeOfType<CallNode>();
+            call1.Args.ShouldBeNull();
 
             var func1 = call1.Function.ShouldBeOfType<AccessorNode>();
             func1.Name.ShouldBe("Biggest");
 
             var call2 = func1.Parent.ShouldBeOfType<CallNode>();
-            call2.Args[0].ShouldBeOfType<ValueNode<string>>().Value.ShouldBe("Dogs");
-            call2.Args[1].ShouldBeOfType<ValueNode<string>>().Value.ShouldBe("Chihuahuas");
 
+            var arg1 = call2.Args.ShouldBeOfType<ListNode>();
+            arg1.Item.ShouldBeOfType<ValueNode<string>>().Value.ShouldBe("Dogs");
+
+            var arg2Val = arg1.Next.ShouldBeOfType<ValueNode<string>>();
+            arg2Val.Value.ShouldBe("Chihuahuas");
+            
             var func2 = call2.Function.ShouldBeOfType<AccessorNode>();
             func2.Name.ShouldBe("Choose");
 
@@ -54,10 +58,12 @@ namespace Parser.Tests
         {
             var parsed = Parser.Parse("BigDogs?$filter=true");
 
-            var stage1 = parsed.Resource.ShouldBeOfType<AccessorNode>();
+            var query = parsed.ShouldBeOfType<QueryNode>();
+            
+            var stage1 = query.Resource.ShouldBeOfType<AccessorNode>();
             stage1.Name.ShouldBe("BigDogs");
 
-            var assignNode = parsed.Options.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
+            var assignNode = query.Options.ShouldBeOfType<AssignmentNode>();
 
             assignNode.Left.ShouldBeOfType<SymbolNode>()
                             .Symbol.ShouldBe(Symbol.Filter);
@@ -70,23 +76,19 @@ namespace Parser.Tests
 
         [Fact(DisplayName = "Parses lists into linked list")]
         public void Parses_Lists() {
-            var parsed = Parser.Parse("1,2,(1,2)");
-
-            var n1 = parsed.Resource.ShouldBeOfType<ListNode>();
+            var parsed = Parser.Parse("1,2,(3,4)");     //groupings are elided by the parser
+                                                        
+            var n1 = parsed.ShouldBeOfType<ListNode>();
             n1.Item.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(1);
 
             var n2 = n1.Next.ShouldBeOfType<ListNode>();
             n2.Item.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(2);
 
             var n3 = n2.Next.ShouldBeOfType<ListNode>();
-            n3.Next.ShouldBeNull();
+            n3.Item.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(3);
 
-            var n31 = n3.Item.ShouldBeOfType<ListNode>();
-            n31.Item.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(1);
-
-            var n32 = n31.Next.ShouldBeOfType<ListNode>();
-            n32.Item.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(2);
-            n32.Next.ShouldBeNull();
+            var n4 = n3.Next.ShouldBeOfType<ValueNode<int>>();
+            n4.Value.ShouldBe(4);            
         }
 
 
@@ -99,9 +101,11 @@ namespace Parser.Tests
         public void Parses_MoreComplicatedFilter() {
             var parsed = Parser.Parse("?$filter=(2 eq 4) or false");
 
-            parsed.Resource.ShouldBeNull();
+            var query = parsed.ShouldBeOfType<QueryNode>();
 
-            var assignNode = parsed.Options.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
+            query.Resource.ShouldBeNull();
+
+            var assignNode = query.Options.ShouldBeOfType<AssignmentNode>();
 
             assignNode.Left.ShouldBeOfType<SymbolNode>()
                             .Symbol.ShouldBe(Symbol.Filter);
@@ -124,11 +128,13 @@ namespace Parser.Tests
         public void Parses_Accessors() {
             var parsed = Parser.Parse("Animals?$filter=Name/Length() eq 10");
 
-            var resNode = parsed.Resource.ShouldBeOfType<AccessorNode>();
+            var query = parsed.ShouldBeOfType<QueryNode>();
+
+            var resNode = query.Resource.ShouldBeOfType<AccessorNode>();
             resNode.Name.ShouldBe("Animals");
             resNode.Parent.ShouldBeNull();
 
-            var assignNode = parsed.Options.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
+            var assignNode = query.Options.ShouldBeOfType<AssignmentNode>();
             assignNode.Left.ShouldBeOfType<SymbolNode>().Symbol.ShouldBe(Symbol.Filter);
 
             var eqNode = assignNode.Right.ShouldBeOfType<BinaryOperatorNode>();
@@ -138,7 +144,7 @@ namespace Parser.Tests
             rightNode.Value.ShouldBe(10);
 
             var callNode = eqNode.Left.ShouldBeOfType<CallNode>();
-            callNode.Args.ShouldBeEmpty();
+            callNode.Args.ShouldBeNull();
 
             var funcNode = callNode.Function.ShouldBeOfType<AccessorNode>();
             funcNode.Name.ShouldBe("Length");
@@ -151,7 +157,7 @@ namespace Parser.Tests
         public void NumbersInNames() {
             var parsed = Parser.Parse("AB123CD/E3");
 
-            var node1 = parsed.Resource.ShouldBeOfType<AccessorNode>();
+            var node1 = parsed.ShouldBeOfType<AccessorNode>();
             node1.Name.ShouldBe("E3");
 
             var node2 = node1.Parent.ShouldBeOfType<AccessorNode>();
@@ -165,7 +171,7 @@ namespace Parser.Tests
         public void ParsesDecimals() {
             var parsed = Parser.Parse("43.123456 add -1.123");
 
-            var add = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            var add = parsed.ShouldBeOfType<BinaryOperatorNode>();
             add.Operator.ShouldBe(Operator.Add);
 
             var left = add.Left.ShouldBeOfType<ValueNode<decimal>>();
@@ -186,7 +192,7 @@ namespace Parser.Tests
         {
             var parsed = Parser.Parse("43 add 3 mul 7");
 
-            var add = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            var add = parsed.ShouldBeOfType<BinaryOperatorNode>();
             add.Operator.ShouldBe(Operator.Add);
 
             var addLeft = add.Left.ShouldBeOfType<ValueNode<int>>();
@@ -208,7 +214,7 @@ namespace Parser.Tests
         {
             var parsed = Parser.Parse("43 mul 3 add 7");
 
-            var add = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            var add = parsed.ShouldBeOfType<BinaryOperatorNode>();
             add.Operator.ShouldBe(Operator.Add);
             add.Right.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(7);
 
@@ -226,7 +232,9 @@ namespace Parser.Tests
         public void Parses_V4_Dates() {
             var parsed = Parser.Parse("?$filter=Date gt 2012-05-29");
 
-            var assignNode = parsed.Options.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
+            var query = parsed.ShouldBeOfType<QueryNode>();
+
+            var assignNode = query.Options.ShouldBeOfType<AssignmentNode>();
 
             var gtNode = assignNode.Right.ShouldBeOfType<BinaryOperatorNode>();
             gtNode.Operator.ShouldBe(Operator.GreaterThan);
@@ -247,7 +255,9 @@ namespace Parser.Tests
         public void Parses_V4_DateTimes() {
             var parsed = Parser.Parse("?$filter=Date gt 2012-05-29T23:11:11.123Z");
 
-            var assignNode = parsed.Options.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
+            var query = parsed.ShouldBeOfType<QueryNode>();
+
+            var assignNode = query.Options.ShouldBeOfType<AssignmentNode>();
 
             var gtNode = assignNode.Right.ShouldBeOfType<BinaryOperatorNode>();
             gtNode.Operator.ShouldBe(Operator.GreaterThan);
@@ -297,7 +307,7 @@ namespace Parser.Tests
         public void Respects_Unary_Precedence1() {
             var parsed = Parser.Parse("not false and true");
 
-            var andNode = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            var andNode = parsed.ShouldBeOfType<BinaryOperatorNode>();
             andNode.Operator.ShouldBe(Operator.And);
 
             andNode.Right.ShouldBeOfType<ValueNode<bool>>()
@@ -315,7 +325,7 @@ namespace Parser.Tests
         public void Respects_Unary_Precedence2() {
             var parsed = Parser.Parse("true and not false");
             
-            var andNode = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            var andNode = parsed.ShouldBeOfType<BinaryOperatorNode>();
             andNode.Operator.ShouldBe(Operator.And);
 
             andNode.Left.ShouldBeOfType<ValueNode<bool>>()
@@ -336,7 +346,7 @@ namespace Parser.Tests
         public void Respects_Groupings() {
             var parsed = Parser.Parse("not(true and false)");   //if they didn't isolate, the 'not' here would stop the 'and' being taken
 
-            var notNode = parsed.Resource.ShouldBeOfType<UnaryOperatorNode>();
+            var notNode = parsed.ShouldBeOfType<UnaryOperatorNode>();
             notNode.Operator.ShouldBe(Operator.Not);
 
             var andNode = notNode.Operand.ShouldBeOfType<BinaryOperatorNode>();
@@ -353,7 +363,7 @@ namespace Parser.Tests
         public void Navigation_Precedence() {
             var parsed = Parser.Parse("root/num() mul root/num");
 
-            var mulNode = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            var mulNode = parsed.ShouldBeOfType<BinaryOperatorNode>();
             mulNode.Operator.ShouldBe(Operator.Multiply);
 
             mulNode.Left.ShouldBeOfType<CallNode>()
@@ -381,14 +391,9 @@ namespace Parser.Tests
 
         [Fact(DisplayName = "Parses unary operators")]
         public void Parses_Unary_Operators() {
-            var parsed = Parser.Parse("?$filter=not (-Length eq -1) and true");
-
-            parsed.Resource.ShouldBeNull();
-
-            var assignNode = parsed.Options.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
-            assignNode.Left.ShouldBeOfType<SymbolNode>().Symbol.ShouldBe(Symbol.Filter);
+            var parsed = Parser.Parse("not (-Length eq -1) and true");
             
-            var andNode = assignNode.Right.ShouldBeOfType<BinaryOperatorNode>();
+            var andNode = parsed.ShouldBeOfType<BinaryOperatorNode>();
             andNode.Operator.ShouldBe(Operator.And);
 
             var trueNode = andNode.Right.ShouldBeOfType<ValueNode<bool>>();

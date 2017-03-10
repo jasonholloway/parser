@@ -2,15 +2,15 @@
   <!--<ItemGroup>
     <Compile Include="*.cs" />
   </ItemGroup>-->
+  <ItemGroup>
+    <Compile Include="*.cs" />
+  </ItemGroup>
   <PropertyGroup>
     <TargetFramework>netstandard1.4</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NETStandard.Library" Version="1.6" />
   </ItemGroup>
-  <!--<ItemGroup>
-    <Compile Include="*.cs" />
-  </ItemGroup>-->
   <ItemGroup>
     <Compile Remove="SyntaxNodes.cs" />
     <Compile Remove="SyntaxParser.cs" />
