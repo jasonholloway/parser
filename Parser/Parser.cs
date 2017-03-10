@@ -65,6 +65,31 @@ namespace Parser
         }
 
 
+
+        TokenSpan Take(Token token, int size = -1) {
+            var span = CurrSpan;
+
+            if(span.Token != token) throw new InvalidOperationException("Unexpected token encountered!");
+
+            if(size >= 0 && span.Size != size) throw new InvalidOperationException("Unexpected token encountered!");
+
+            Next();
+
+            return span;
+        }
+
+        void Skip(Token token, int size = -1, string match = null) {
+            if(CurrToken != token) throw new InvalidOperationException("Unexpected token encountered!");
+
+            if(match != null && !CurrSpan.Match(_source, match)) throw new InvalidOperationException("Unexpected token encountered!");
+            
+            if(size >= 0 && CurrSpan.Size != size) throw new InvalidOperationException("Unexpected token encountered!");
+
+            Next();
+        }
+
+
+
         TokenSpan CurrSpan;
         TokenSpan NextSpan;
 
@@ -483,7 +508,7 @@ namespace Parser
 
         INode ParseValue()
             => ParseString()
-                ?? ParseDate()
+                ?? ParseV4Date()
                 ?? ParseInteger()
                 ?? ParseBoolean()
                 ?? Null<INode>();
@@ -491,30 +516,49 @@ namespace Parser
 
         
 
-        INode ParseDate() {
+        INode ParseV4Date() {
             if(CurrToken == Token.Number 
                 && CurrSpan.Size == 4
-                && NextToken == Token.Hyphen) {
+                && NextToken == Token.Hyphen) 
+            {
                 //it looks like this might be a date; but we need to checkpoint here to make sure
                 //if anything below goes awry, we need to restore and return
 
-                var year = CurrSpan.AsInt(_source);
-                Next();
+                int year, month, day, hour = 0, minute = 0, second = 0, millisecond = 0;
 
-                Next();
+                year = Take(Token.Number, size: 4).AsInt(_source);
 
-                var month = CurrSpan.AsInt(_source);
-                Next();
+                Skip(Token.Hyphen);
 
-                Next();
+                month = Take(Token.Number, size: 2).AsInt(_source);
 
-                var day = CurrSpan.AsInt(_source);
-                Next();
+                Skip(Token.Hyphen);
 
-                //now, a 'T' signifies a forthcoming time portion
-                //...
+                day = Take(Token.Number, size: 2).AsInt(_source);
+                
+                if(CurrToken == Token.Word && CurrSpan.Match(from: _source, comp: "T")) 
+                {
+                    Skip(Token.Word);
 
-                throw new NotImplementedException();
+                    hour = Take(Token.Number, size: 2).AsInt(_source);
+
+                    Skip(Token.Colon);
+
+                    minute = Take(Token.Number, size: 2).AsInt(_source);
+
+                    Skip(Token.Colon);
+
+                    second = Take(Token.Number, size: 2).AsInt(_source);
+
+                    if(CurrToken == Token.Dot) {
+                        Skip(Token.Dot);
+                        millisecond = Take(Token.Number).AsInt(_source);
+                    }
+                    
+                    Skip(Token.Word, match: "Z");
+                }
+                
+                return new ValueNode<DateTimeOffset>(new DateTimeOffset(year, month, day, hour, minute, second, millisecond, TimeSpan.Zero));
             }
 
             return null;

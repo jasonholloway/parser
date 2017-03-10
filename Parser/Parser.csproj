@@ -8,9 +8,9 @@
   <ItemGroup>
     <PackageReference Include="NETStandard.Library" Version="1.6" />
   </ItemGroup>
-  <ItemGroup>
+  <!--<ItemGroup>
     <Compile Include="*.cs" />
-  </ItemGroup>
+  </ItemGroup>-->
   <ItemGroup>
     <Compile Remove="SyntaxNodes.cs" />
     <Compile Remove="SyntaxParser.cs" />

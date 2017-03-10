@@ -25,7 +25,7 @@ namespace Parser
         Hyphen,
         Colon,
         Comma,
-        Minus,
+        Add,
         QuestionMark,
         Hash,
         Dot,

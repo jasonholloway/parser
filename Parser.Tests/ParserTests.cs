@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Xunit;
 using Shouldly;
+using System.Text.RegularExpressions;
 
 namespace Parser.Tests
 {
@@ -135,9 +136,9 @@ namespace Parser.Tests
 
 
 
-        [Fact(DisplayName = "V4 Dates parsed")]
+        [Fact(DisplayName = "Parses V4 dates")]
         public void Parses_V4_Dates() {
-            var parsed = Parser.Parse("?$filter=Date gt 2012-05-29T09:13:28.123Z");
+            var parsed = Parser.Parse("?$filter=Date gt 2012-05-29");
 
             var assignNode = parsed.Options.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
 
@@ -147,21 +148,18 @@ namespace Parser.Tests
             var leftNode = gtNode.Left.ShouldBeOfType<AccessorNode>();
             leftNode.Name.ShouldBe("Date");
 
-            var rightNode = gtNode.Right.ShouldBeOfType<ValueNode<DateTime>>();
+            var rightNode = gtNode.Right.ShouldBeOfType<ValueNode<DateTimeOffset>>();
             rightNode.Value.Year.ShouldBe(2012);
             rightNode.Value.Month.ShouldBe(5);
             rightNode.Value.Day.ShouldBe(29);
-            rightNode.Value.Hour.ShouldBe(9);
-            rightNode.Value.Minute.ShouldBe(13);
-            rightNode.Value.Second.ShouldBe(28);
-            rightNode.Value.Millisecond.ShouldBe(123);
         }
 
 
 
-        [Fact(DisplayName = "V3 Dates parsed")]
-        public void Parses_V3_Dates() {
-            var parsed = Parser.Parse("?$filter=Date ge datetime'2012-05-29T09:13:28.123");
+
+        [Fact(DisplayName = "Parses V4 datetimes")]
+        public void Parses_V4_DateTimes() {
+            var parsed = Parser.Parse("?$filter=Date gt 2012-05-29T23:11:11.123Z");
 
             var assignNode = parsed.Options.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
 
@@ -171,15 +169,41 @@ namespace Parser.Tests
             var leftNode = gtNode.Left.ShouldBeOfType<AccessorNode>();
             leftNode.Name.ShouldBe("Date");
 
-            var rightNode = gtNode.Right.ShouldBeOfType<ValueNode<DateTime>>();
+            var rightNode = gtNode.Right.ShouldBeOfType<ValueNode<DateTimeOffset>>();
             rightNode.Value.Year.ShouldBe(2012);
             rightNode.Value.Month.ShouldBe(5);
             rightNode.Value.Day.ShouldBe(29);
-            rightNode.Value.Hour.ShouldBe(9);
-            rightNode.Value.Minute.ShouldBe(13);
-            rightNode.Value.Second.ShouldBe(28);
+            rightNode.Value.Hour.ShouldBe(23);
+            rightNode.Value.Minute.ShouldBe(11);
+            rightNode.Value.Second.ShouldBe(11);
             rightNode.Value.Millisecond.ShouldBe(123);
         }
+
+
+        
+
+
+        //[Fact(DisplayName = "V3 Dates parsed")]
+        //public void Parses_V3_Dates() {
+        //    var parsed = Parser.Parse("?$filter=Date ge datetime'2012-05-29T09:13:28.123");
+
+        //    var assignNode = parsed.Options.ShouldHaveSingleItem().ShouldBeOfType<AssignmentNode>();
+
+        //    var gtNode = assignNode.Right.ShouldBeOfType<BinaryOperatorNode>();
+        //    gtNode.Operator.ShouldBe(Operator.GreaterThan);
+
+        //    var leftNode = gtNode.Left.ShouldBeOfType<AccessorNode>();
+        //    leftNode.Name.ShouldBe("Date");
+
+        //    var rightNode = gtNode.Right.ShouldBeOfType<ValueNode<DateTime>>();
+        //    rightNode.Value.Year.ShouldBe(2012);
+        //    rightNode.Value.Month.ShouldBe(5);
+        //    rightNode.Value.Day.ShouldBe(29);
+        //    rightNode.Value.Hour.ShouldBe(9);
+        //    rightNode.Value.Minute.ShouldBe(13);
+        //    rightNode.Value.Second.ShouldBe(28);
+        //    rightNode.Value.Millisecond.ShouldBe(123);
+        //}
 
 
 
