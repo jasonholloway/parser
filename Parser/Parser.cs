@@ -133,14 +133,13 @@ namespace Parser
         
         Query Parse() 
         {
-            CurrToken.MustBe(Token.Start);            
-            Next();
+            Skip(Token.Start);            
             
             var path = ParseNode();
             var options = (IReadOnlyList<INode>)new INode[0];
 
             if(CurrToken == Token.QuestionMark) {
-                Next();
+                Skip(Token.QuestionMark);                
                 options = ParseOptions();
             }
 
@@ -149,33 +148,12 @@ namespace Parser
             //    ParseFragment();
             //}
 
-            CurrToken.MustBe(Token.End);
+            Skip(Token.End);
             
             return new Query(path, options);
         }
 
-
-
-        //INode ParsePath() 
-        //{
-        //    while(true) {
-        //        switch(CurrToken) {                    
-        //            case Token.Slash:
-        //                Next();
-        //                break;
-
-        //            case Token.QuestionMark:
-        //            case Token.End:
-        //                return;
-
-        //            default:
-        //                var segment = ParseSegment();
-        //                Spec.Path.Add(segment);
-        //                break;
-        //        }
-        //    }            
-        //}
-
+                
 
         IReadOnlyList<INode> ParseOptions() 
         {
@@ -199,48 +177,6 @@ namespace Parser
         }
 
                 
-
-        //INode ParseOption()
-        //    => ParseFilter()
-        //        || ParseSelect()
-        //        || Error<bool>();
-
-
-
-        //bool ParseFilter() 
-        //{
-        //    if(CurrToken == Token.ReservedWord 
-        //        && NextToken == Token.Equals 
-        //        && CurrSpan.Match(_source, "$filter")) 
-        //    {
-        //        Next();
-        //        Next();
-
-        //        Spec.Filter = ParseNode();
-                
-        //        return true;
-        //    }
-
-        //    return false;
-        //}
-
-
-        //bool ParseSelect() {
-        //    return false;
-        //}
-
-
-
-
-
-
-        //void ParseFragment() {
-        //    //...
-        //}
-
-
-
-
 
 
 
@@ -331,8 +267,23 @@ namespace Parser
 
 
 
+        enum Greed
+        {
+            Full            = 999,
+            Grouping        = 0,
+            Primary         = 1,
+            Unary           = 2,
+            Multiplicative  = 3,
+            Additive        = 4,
+            Relational      = 5,
+            Equality        = 6,
+            ConditionalAnd  = 7,
+            ConditionalOr   = 8
+        }
 
-        INode ParseNode(bool consumeBinaries = true) 
+
+
+        INode ParseNode() 
         {
             var node = ParseGroup()                             //start our parsing
                         ?? ParseUnary()                         //unaries shouldn't continue to consume binaries (or navigations, etc)
@@ -347,7 +298,7 @@ namespace Parser
                 var next = ParseNavigation(node)
                             ?? ParseAssignment(node)
                             ?? ParseCall(node)
-                            ?? (consumeBinaries ? ParseBinary(node) : null);
+                            ?? ParseBinary(node);
 
                 if(next != null) {
                     node = next;
@@ -357,8 +308,42 @@ namespace Parser
                 }
             }
         }
+
+
+
         
+        Stack<Greed> _stGreed = new Stack<Greed>();
         
+        Greed CurrGreed => _stGreed.Count > 0 ? _stGreed.Peek() : Greed.Full;
+
+
+
+        INode ParseBinary(INode leftNode) {
+            if(CurrToken == Token.Space && NextToken == Token.Word) 
+            {
+                var op = GetOperator(NextSpan.AsString(_source));
+                var opPrecedence = GetPrecedence(op);
+
+                if(CurrGreed >= opPrecedence) {
+                    Skip(Token.Space);
+                    Skip(Token.Word);
+                    Skip(Token.Space);
+
+                    _stGreed.Push(opPrecedence);
+
+                    var rightNode = ParseNode();
+
+                    _stGreed.Pop();
+
+                    return new BinaryOperatorNode(op, leftNode, rightNode);
+                }
+            }
+
+            return null;
+        }
+
+
+
 
         INode ParseUnary() {            
             if(CurrToken == Token.Word) {                
@@ -366,7 +351,13 @@ namespace Parser
                     Next();
                     while(CurrToken == Token.Space) Next();
 
-                    return new UnaryOperatorNode(Operator.Not, ParseNode(consumeBinaries: false));
+                    _stGreed.Push(Greed.Unary);
+
+                    var operand = ParseNode();
+
+                    _stGreed.Pop();
+
+                    return new UnaryOperatorNode(Operator.Not, operand);
                 }
             }
 
@@ -374,7 +365,13 @@ namespace Parser
                 Next();
                 while(CurrToken == Token.Space) Next();
 
-                return new UnaryOperatorNode(Operator.Negate, ParseNode(consumeBinaries: false));
+                _stGreed.Push(Greed.Unary);
+
+                var operand = ParseNode();
+
+                _stGreed.Pop();
+
+                return new UnaryOperatorNode(Operator.Negate, operand);
             }
 
             //casting is the last unary left to do...
@@ -383,7 +380,6 @@ namespace Parser
         }
 
         
-
 
         INode ParseCall(INode leftNode) {
             if(CurrToken == Token.Open) {
@@ -453,53 +449,20 @@ namespace Parser
             return null;
         }
 
-
-
-
-        Operator GetOperator(string name) {
-            switch(name) {
-                case "eq": return Operator.Equals;
-                case "ne": return Operator.NotEquals;
-                case "gt": return Operator.GreaterThan;
-                case "lt": return Operator.LessThan;
-                case "and": return Operator.And;
-                case "or": return Operator.Or;
-                case "add": return Operator.Add;
-                case "div": return Operator.Divide;
-                case "mul": return Operator.Multiply;
-                case "sub": return Operator.Subtract;
-                case "mod": return Operator.Modulo;
-                default: throw new NotImplementedException();
-            }
-        }
-        
-
-        INode ParseBinary(INode leftNode) {
-            if(CurrToken == Token.Space && NextToken == Token.Word) 
-            {
-                Next();
-                var op = GetOperator(CurrSpan.AsString(_source));
-
-                Next();
-                CurrToken.MustBe(Token.Space);
-
-                Next();
-                var rightNode = ParseNode();
-
-                return new BinaryOperatorNode(op, leftNode, rightNode);
-            }
-
-            return null;
-        }
         
 
         INode ParseGroup() {
-            if(CurrToken == Token.Open) {
-                Next();
+            if(CurrToken == Token.Open) 
+            {
+                Skip(Token.Open);
+
+                _stGreed.Push(Greed.Full);
+
                 var inner = ParseNode();
 
-                CurrToken.MustBe(Token.Close);
-                Next();
+                _stGreed.Pop();
+
+                Skip(Token.Close);
 
                 return inner;
             }
@@ -515,7 +478,7 @@ namespace Parser
             => ParseString()
                 ?? ParseV4Date()
                 ?? ParseDecimal()
-                ?? ParseNumber()
+                ?? ParseInteger()
                 ?? ParseBoolean()
                 ?? Null<INode>();
 
@@ -625,7 +588,7 @@ namespace Parser
         }
 
 
-        INode ParseNumber() 
+        INode ParseInteger() 
         {
             if(CurrToken == Token.Number) {
                 var whole = Take(Token.Number).AsInt(_source);
@@ -639,8 +602,56 @@ namespace Parser
 
 
 
+        #region Helpers
 
-        
+        static Operator GetOperator(string name) {
+            switch(name) {
+                case "eq": return Operator.Equals;
+                case "ne": return Operator.NotEquals;
+                case "gt": return Operator.GreaterThan;
+                case "lt": return Operator.LessThan;
+                case "and": return Operator.And;
+                case "or": return Operator.Or;
+                case "add": return Operator.Add;
+                case "div": return Operator.Divide;
+                case "mul": return Operator.Multiply;
+                case "sub": return Operator.Subtract;
+                case "mod": return Operator.Modulo;
+                default: throw new NotImplementedException();
+            }
+        }
+
+
+
+        static Greed GetPrecedence(Operator op) {
+            switch(op) {
+                //case Operator.Navigate: return Precedence.Primary;
+
+                case Operator.Not: return Greed.Unary;
+                case Operator.Negate: return Greed.Unary;
+
+                case Operator.Multiply: return Greed.Multiplicative;
+                case Operator.Divide: return Greed.Multiplicative;
+                case Operator.Modulo: return Greed.Multiplicative;
+
+                case Operator.Add: return Greed.Additive;
+                case Operator.Subtract: return Greed.Additive;
+
+                case Operator.GreaterThan: return Greed.Relational;
+                case Operator.LessThan: return Greed.Relational;
+
+                case Operator.Equals: return Greed.Equality;
+                case Operator.NotEquals: return Greed.Equality;
+
+                case Operator.And: return Greed.ConditionalAnd;
+                case Operator.Or: return Greed.ConditionalOr;
+
+                default: throw new NotImplementedException();
+            }
+        }
+
+
+
 
 
         static T Null<T>()
@@ -651,7 +662,8 @@ namespace Parser
         static T Error<T>()
             => throw new InvalidOperationException($"No parsing strategy available!");
 
-             
+        #endregion
+
     }
 
     

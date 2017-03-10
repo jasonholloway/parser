@@ -157,7 +157,8 @@ namespace Parser.Tests
 
 
         [Fact(DisplayName = "Parses multiplicatives ahead of additives 1")]
-        public void ParsesMultiplicativesAheadOfAdditives1() {
+        public void ParsesMultiplicativesAheadOfAdditives1() 
+        {
             var parsed = Parser.Parse("43 add 3 mul 7");
 
             var add = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
@@ -178,23 +179,18 @@ namespace Parser.Tests
 
 
         [Fact(DisplayName = "Parses multiplicatives ahead of additives 2")]
-        public void ParsesMultiplicativesAheadOfAdditives2() {
+        public void ParsesMultiplicativesAheadOfAdditives2() 
+        {
             var parsed = Parser.Parse("43 mul 3 add 7");
 
             var add = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
             add.Operator.ShouldBe(Operator.Add);
+            add.Right.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(7);
 
-            var addLeft = add.Left.ShouldBeOfType<ValueNode<int>>();
-            addLeft.Value.ShouldBe(43);
-
-            var addRight = add.Right.ShouldBeOfType<BinaryOperatorNode>();
-            addRight.Operator.ShouldBe(Operator.Multiply);
-
-            var mulLeft = addRight.Left.ShouldBeOfType<ValueNode<int>>();
-            mulLeft.Value.ShouldBe(3);
-
-            var mulRight = addRight.Right.ShouldBeOfType<ValueNode<int>>();
-            mulRight.Value.ShouldBe(7);
+            var mul = add.Left.ShouldBeOfType<BinaryOperatorNode>();
+            mul.Operator.ShouldBe(Operator.Multiply);
+            mul.Left.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(43);
+            mul.Right.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(3);
         }
 
 
@@ -245,7 +241,7 @@ namespace Parser.Tests
         }
 
 
-        
+
 
 
         //[Fact(DisplayName = "V3 Dates parsed")]
@@ -269,6 +265,68 @@ namespace Parser.Tests
         //    rightNode.Value.Second.ShouldBe(28);
         //    rightNode.Value.Millisecond.ShouldBe(123);
         //}
+
+
+
+        [Fact(DisplayName = "Respects unary precedence 1")]
+        public void Respects_Unary_Precedence1() {
+            var parsed = Parser.Parse("not false and true");
+
+            var andNode = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            andNode.Operator.ShouldBe(Operator.And);
+
+            andNode.Right.ShouldBeOfType<ValueNode<bool>>()
+                        .Value.ShouldBeTrue();
+
+            var notNode = andNode.Left.ShouldBeOfType<UnaryOperatorNode>();
+
+            notNode.Operand.ShouldBeOfType<ValueNode<bool>>()
+                            .Value.ShouldBeFalse();            
+        }
+
+
+
+        [Fact(DisplayName = "Respects unary precedence 2")]
+        public void Respects_Unary_Precedence2() {
+            var parsed = Parser.Parse("true and not false");
+            
+            var andNode = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            andNode.Operator.ShouldBe(Operator.And);
+
+            andNode.Left.ShouldBeOfType<ValueNode<bool>>()
+                        .Value.ShouldBeTrue();
+
+            var notNode = andNode.Right.ShouldBeOfType<UnaryOperatorNode>();
+
+            notNode.Operand.ShouldBeOfType<ValueNode<bool>>()
+                            .Value.ShouldBeFalse();
+
+        }
+
+
+
+
+
+        [Fact(DisplayName = "Groupings isolate internal precedences")]
+        public void Respects_Groupings() {
+            var parsed = Parser.Parse("not(true and false)");   //if they didn't isolate, the 'not' here would stop the 'and' being taken
+
+            var notNode = parsed.Resource.ShouldBeOfType<UnaryOperatorNode>();
+            notNode.Operator.ShouldBe(Operator.Not);
+
+            var andNode = notNode.Operand.ShouldBeOfType<BinaryOperatorNode>();
+            andNode.Operator.ShouldBe(Operator.And);
+            andNode.Left.ShouldBeOfType<ValueNode<bool>>().Value.ShouldBeTrue();
+            andNode.Right.ShouldBeOfType<ValueNode<bool>>().Value.ShouldBeFalse();
+        }
+
+
+
+
+        [Fact(DisplayName = "Parses GUIDs")]
+        public void Parses_Guids() {
+            throw new NotImplementedException();
+        }
 
 
 
