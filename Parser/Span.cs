@@ -60,18 +60,56 @@ namespace Parser
         //    => source.Substring(span.Left, span.Right - span.Left);
 
 
+        public static string Read(this string source, int left, int right) 
+        {
+            var sb = new StringBuilder(right - left);
+
+            var reader = new CharReader(source, left, right - left);
+
+            while(reader.MoveNext()) sb.Append(reader.Current);
+
+            return sb.ToString();
+        }
 
 
-        public static string From(this TokenSpan span, string source) 
+
+
+        public static int AsInt(this TokenSpan span, string source) 
+        {
+            span.Token.MustBe(Token.Number);
+
+            var reader = new CharReader(source, span.Left, span.Size);
+
+            int acc = 0;
+
+            while(reader.MoveNext()) {
+                acc *= 10;
+                acc += reader.Current.DecodeAsDecimal();
+            }
+
+            return acc;
+        }
+
+
+        public static string AsString(this TokenSpan span, string source) 
         {
             var sb = new StringBuilder(span.Size);
 
+            var reader = new CharReader(source, span.Left, span.Size);
+
             switch(span.Token) {
                 case Token.String:
+                    reader.MoveNext();
+
+                    while(reader.MoveNext() && reader.Current != '\'') {
+                        sb.Append(reader.Current);
+                    }
                     break;
 
                 default:
-                    return source.Substring(span.Left, span.Right - span.Left);         //instead of substring here, need to walk through chars
+                    //should use reader here as above!!!
+                    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    return source.Substring(span.Left, span.Right - span.Left);
             }
 
             return sb.ToString();

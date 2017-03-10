@@ -14,6 +14,29 @@ namespace Parser
         }
     }
     
+
+    public class AssignmentNode : INode
+    {
+        public readonly INode Left;
+        public readonly INode Right;
+
+        public AssignmentNode(INode left, INode right) {
+            Left = left;
+            Right = right;
+        }
+    }
+
+
+    public class SymbolNode : INode
+    {
+        public readonly Symbol Symbol;
+
+        public SymbolNode(Symbol optionType) {
+            Symbol = optionType;
+        }
+    }
+
+
     public class UnaryOperatorNode : INode
     {
         public readonly Operator Operator;
@@ -54,12 +77,12 @@ namespace Parser
 
 
 
-    public class FunctionCallNode : INode
+    public class CallNode : INode
     {
         public readonly INode Function;
         public readonly IReadOnlyList<INode> Args;
         
-        public FunctionCallNode(INode function, IReadOnlyList<INode> args) {
+        public CallNode(INode function, IReadOnlyList<INode> args) {
             Function = function;
             Args = args;
         }

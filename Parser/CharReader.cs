@@ -11,7 +11,6 @@ namespace Parser
         public string Source { get; private set; }
 
         public char Current { get; private set; }
-        public char Next { get; private set; }
 
         public int ReadStart { get; private set; }
         public int ReadLength { get; private set; }
@@ -22,12 +21,13 @@ namespace Parser
         public bool AtEnd { get; private set; }
 
 
-        public CharReader(string source) {
+        public CharReader(string source, int startIndex = 0, int length = -1) {
             Source = source;
-            RemainingCount = Source.Length;
-            AtEnd = false;
-            ReadStart = ReadLength = 0;
+            RemainingCount = length < 0 ? Source.Length : length;
+            ReadStart = startIndex;
+            ReadLength = 0;
             Current = (char)0;
+            AtEnd = false;
         }
 
 

@@ -57,6 +57,13 @@ namespace Parser
             else return c - 'a';
         }
 
+
+        public static int DecodeAsDecimal(this char c) {
+            if(c >= '0' && c <= '9') return c - '0';
+            else throw new InvalidOperationException($"Encounterd non-decimal character '{c}'!");
+        }
+
+
     }
 
 
@@ -69,7 +76,7 @@ namespace Parser
     //The QueryToken will then split into its internal tokens when inspected
     //
 
-        
+
 
 
 
@@ -162,7 +169,7 @@ namespace Parser
         {
             if(!x.Char.IsNumber()) return null;
 
-            while(x.NextChar.IsNumber()) x.Shift();
+            while(x.NextChar.IsNumber()) x.Shift(); //it's true - it still seems dates should be lexed here
             
             return x.Emit(Token.Number);            
         }
