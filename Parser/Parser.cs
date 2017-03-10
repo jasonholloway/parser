@@ -36,7 +36,7 @@ namespace Parser
     public class Parser
     {
 
-        public static Query Parse(string source)
+        public static INode Parse(string source)
             => new Parser(source).Parse();
 
 

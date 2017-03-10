@@ -68,6 +68,31 @@ namespace Parser.Tests
 
 
 
+        [Fact(DisplayName = "Parses lists into linked list")]
+        public void Parses_Lists() {
+            var parsed = Parser.Parse("1,2,(1,2)");
+
+            var n1 = parsed.Resource.ShouldBeOfType<ListNode>();
+            n1.Item.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(1);
+
+            var n2 = n1.Next.ShouldBeOfType<ListNode>();
+            n2.Item.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(2);
+
+            var n3 = n2.Next.ShouldBeOfType<ListNode>();
+            n3.Next.ShouldBeNull();
+
+            var n31 = n3.Item.ShouldBeOfType<ListNode>();
+            n31.Item.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(1);
+
+            var n32 = n31.Next.ShouldBeOfType<ListNode>();
+            n32.Item.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(2);
+            n32.Next.ShouldBeNull();
+        }
+
+
+
+
+
 
 
         [Fact(DisplayName = "Parses more complicated filter")]

@@ -63,6 +63,31 @@ namespace Parser
     }
 
     
+    
+    public class OptionsNode
+    {
+        public readonly INode Resource;
+        public readonly INode Options;
+
+        public OptionsNode(INode resource, INode options) {
+            Resource = resource;
+            Options = options;
+        }
+    }
+
+
+
+    public class ListNode : INode
+    {
+        public readonly INode Item;
+        public readonly ListNode Next;
+
+        public ListNode(INode item, ListNode next = null) {
+            Item = item;
+            Next = next;
+        }
+    }
+
 
     public class AccessorNode : INode
     {
