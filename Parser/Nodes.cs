@@ -40,11 +40,11 @@ namespace Parser
     public class UnaryOperatorNode : INode
     {
         public readonly Operator Operator;
-        public readonly INode Node;
+        public readonly INode Operand;
 
         public UnaryOperatorNode(Operator op, INode node) {
             Operator = op;
-            Node = node;
+            Operand = node;
         }
     }
 
@@ -102,7 +102,13 @@ namespace Parser
         GreaterThan,
         LessThan,
         And,
-        Or
+        Or,
+
+        Add,
+        Subtract,
+        Multiply,
+        Divide,
+        Modulo
     }
 
 

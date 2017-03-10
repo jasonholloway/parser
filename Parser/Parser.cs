@@ -464,6 +464,11 @@ namespace Parser
                 case "lt": return Operator.LessThan;
                 case "and": return Operator.And;
                 case "or": return Operator.Or;
+                case "add": return Operator.Add;
+                case "div": return Operator.Divide;
+                case "mul": return Operator.Multiply;
+                case "sub": return Operator.Subtract;
+                case "mod": return Operator.Modulo;
                 default: throw new NotImplementedException();
             }
         }
@@ -509,12 +514,16 @@ namespace Parser
         INode ParseValue()
             => ParseString()
                 ?? ParseV4Date()
-                ?? ParseInteger()
+                ?? ParseDecimal()
+                ?? ParseNumber()
                 ?? ParseBoolean()
                 ?? Null<INode>();
 
 
         
+
+
+
 
         INode ParseV4Date() {
             if(CurrToken == Token.Number 
@@ -586,11 +595,7 @@ namespace Parser
         {
             if(CurrToken == Token.String) 
             {
-                var @string = CurrSpan;
-
-                Next();
-
-                return new ValueNode<string>(@string.AsString(_source));
+                return new ValueNode<string>(Take(Token.String).AsString(_source));
             }
 
             return null;
@@ -598,15 +603,34 @@ namespace Parser
 
 
 
-        INode ParseInteger() 
+
+
+        INode ParseDecimal() 
         {
-            if(CurrToken == Token.Number) 
-            {
-                var @int = int.Parse(CurrSpan.AsString(_source));
+            if(CurrToken == Token.Number && NextToken == Token.Dot) {
+                var left = CurrSpan.Left;
 
-                Next();
+                Skip(Token.Number);
+                Skip(Token.Dot);
+                Skip(Token.Number);
 
-                return new ValueNode<int>(@int);
+                var right = CurrSpan.Right;
+
+                var val = decimal.Parse(_source.Read(left, right));
+
+                return new ValueNode<decimal>(val);
+            }
+
+            return null;
+        }
+
+
+        INode ParseNumber() 
+        {
+            if(CurrToken == Token.Number) {
+                var whole = Take(Token.Number).AsInt(_source);
+                
+                return new ValueNode<int>(whole);
             }
 
             return null;

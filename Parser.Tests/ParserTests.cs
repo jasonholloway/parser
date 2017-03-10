@@ -136,6 +136,71 @@ namespace Parser.Tests
 
 
 
+        [Fact(DisplayName = "Parses decimals")]
+        public void ParsesDecimals() {
+            var parsed = Parser.Parse("43.123456 add -1.123");
+
+            var add = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            add.Operator.ShouldBe(Operator.Add);
+
+            var left = add.Left.ShouldBeOfType<ValueNode<decimal>>();
+            left.Value.ShouldBe(43.123456M);
+
+            var neg = add.Right.ShouldBeOfType<UnaryOperatorNode>();
+            neg.Operator.ShouldBe(Operator.Negate);
+
+            var right = neg.Operand.ShouldBeOfType<ValueNode<decimal>>();
+            right.Value.ShouldBe(1.123M);
+        }
+
+
+
+
+        [Fact(DisplayName = "Parses multiplicatives ahead of additives 1")]
+        public void ParsesMultiplicativesAheadOfAdditives1() {
+            var parsed = Parser.Parse("43 add 3 mul 7");
+
+            var add = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            add.Operator.ShouldBe(Operator.Add);
+
+            var addLeft = add.Left.ShouldBeOfType<ValueNode<int>>();
+            addLeft.Value.ShouldBe(43);
+
+            var addRight = add.Right.ShouldBeOfType<BinaryOperatorNode>();
+            addRight.Operator.ShouldBe(Operator.Multiply);
+
+            var mulLeft = addRight.Left.ShouldBeOfType<ValueNode<int>>();
+            mulLeft.Value.ShouldBe(3);
+
+            var mulRight = addRight.Right.ShouldBeOfType<ValueNode<int>>();
+            mulRight.Value.ShouldBe(7);
+        }
+
+
+        [Fact(DisplayName = "Parses multiplicatives ahead of additives 2")]
+        public void ParsesMultiplicativesAheadOfAdditives2() {
+            var parsed = Parser.Parse("43 mul 3 add 7");
+
+            var add = parsed.Resource.ShouldBeOfType<BinaryOperatorNode>();
+            add.Operator.ShouldBe(Operator.Add);
+
+            var addLeft = add.Left.ShouldBeOfType<ValueNode<int>>();
+            addLeft.Value.ShouldBe(43);
+
+            var addRight = add.Right.ShouldBeOfType<BinaryOperatorNode>();
+            addRight.Operator.ShouldBe(Operator.Multiply);
+
+            var mulLeft = addRight.Left.ShouldBeOfType<ValueNode<int>>();
+            mulLeft.Value.ShouldBe(3);
+
+            var mulRight = addRight.Right.ShouldBeOfType<ValueNode<int>>();
+            mulRight.Value.ShouldBe(7);
+        }
+
+
+
+
+
         [Fact(DisplayName = "Parses V4 dates")]
         public void Parses_V4_Dates() {
             var parsed = Parser.Parse("?$filter=Date gt 2012-05-29");
@@ -227,16 +292,16 @@ namespace Parser.Tests
             var notNode = andNode.Left.ShouldBeOfType<UnaryOperatorNode>();
             notNode.Operator.ShouldBe(Operator.Not);
 
-            var eqNode = notNode.Node.ShouldBeOfType<BinaryOperatorNode>();
+            var eqNode = notNode.Operand.ShouldBeOfType<BinaryOperatorNode>();
 
             var negNode = eqNode.Left.ShouldBeOfType<UnaryOperatorNode>();
             negNode.Operator.ShouldBe(Operator.Negate);
 
             var negNode2 = eqNode.Right.ShouldBeOfType<UnaryOperatorNode>();
             negNode2.Operator.ShouldBe(Operator.Negate);
-            negNode2.Node.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(1);
+            negNode2.Operand.ShouldBeOfType<ValueNode<int>>().Value.ShouldBe(1);
 
-            var accessorNode = negNode.Node.ShouldBeOfType<AccessorNode>();
+            var accessorNode = negNode.Operand.ShouldBeOfType<AccessorNode>();
             accessorNode.Name.ShouldBe("Length");
             accessorNode.Parent.ShouldBeNull();
         }
