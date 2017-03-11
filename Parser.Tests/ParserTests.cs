@@ -25,7 +25,7 @@ namespace Parser.Tests
 
 
 
-        [Fact(DisplayName = "Parses function segments & args")]
+        [Fact(DisplayName = "Parses functions & args")]
         public void Parses_Functions() {
             var parsed = Parser.Parse("Animals/Choose('Dogs','Chihuahuas')/Biggest()");
 
@@ -58,9 +58,9 @@ namespace Parser.Tests
         {
             var parsed = Parser.Parse("BigDogs?$filter=true");
 
-            var query = parsed.ShouldBeOfType<QueryNode>();
+            var query = parsed.ShouldBeOfType<OptionsNode>();
             
-            var stage1 = query.Resource.ShouldBeOfType<AccessorNode>();
+            var stage1 = query.Source.ShouldBeOfType<AccessorNode>();
             stage1.Name.ShouldBe("BigDogs");
 
             var assignNode = query.Options.ShouldBeOfType<AssignmentNode>();
@@ -101,9 +101,9 @@ namespace Parser.Tests
         public void Parses_MoreComplicatedFilter() {
             var parsed = Parser.Parse("?$filter=(2 eq 4) or false");
 
-            var query = parsed.ShouldBeOfType<QueryNode>();
+            var query = parsed.ShouldBeOfType<OptionsNode>();
 
-            query.Resource.ShouldBeNull();
+            query.Source.ShouldBeNull();
 
             var assignNode = query.Options.ShouldBeOfType<AssignmentNode>();
 
@@ -128,9 +128,9 @@ namespace Parser.Tests
         public void Parses_Accessors() {
             var parsed = Parser.Parse("Animals?$filter=Name/Length() eq 10");
 
-            var query = parsed.ShouldBeOfType<QueryNode>();
+            var query = parsed.ShouldBeOfType<OptionsNode>();
 
-            var resNode = query.Resource.ShouldBeOfType<AccessorNode>();
+            var resNode = query.Source.ShouldBeOfType<AccessorNode>();
             resNode.Name.ShouldBe("Animals");
             resNode.Parent.ShouldBeNull();
 
@@ -185,6 +185,27 @@ namespace Parser.Tests
         }
 
 
+        [Fact(DisplayName = "Parses options as list")]
+        public void ParsesOptionList() {
+            var parsed = Parser.Parse("TopBirds?$filter=true&$select=Budgerigar,Parrot");
+
+            var query = parsed.ShouldBeOfType<OptionsNode>();
+
+            var list1 = query.Options.ShouldBeOfType<ListNode>();
+
+            list1.Item.ShouldBeOfType<AssignmentNode>()
+                        .Left.ShouldBeOfType<SymbolNode>().Symbol.ShouldBe(Symbol.Filter);
+
+
+            var list2Item = list1.Next.ShouldBeOfType<AssignmentNode>();
+            list2Item.Left.ShouldBeOfType<SymbolNode>().Symbol.ShouldBe(Symbol.Select);
+
+            var innerList1 = list2Item.Right.ShouldBeOfType<ListNode>();
+            innerList1.Item.ShouldBeOfType<AccessorNode>().Name.ShouldBe("Budgerigar");
+
+            innerList1.Next.ShouldBeOfType<AccessorNode>().Name.ShouldBe("Parrot");
+        }
+
 
 
         [Fact(DisplayName = "Parses multiplicatives ahead of additives 1")]
@@ -232,7 +253,7 @@ namespace Parser.Tests
         public void Parses_V4_Dates() {
             var parsed = Parser.Parse("?$filter=Date gt 2012-05-29");
 
-            var query = parsed.ShouldBeOfType<QueryNode>();
+            var query = parsed.ShouldBeOfType<OptionsNode>();
 
             var assignNode = query.Options.ShouldBeOfType<AssignmentNode>();
 
@@ -255,7 +276,7 @@ namespace Parser.Tests
         public void Parses_V4_DateTimes() {
             var parsed = Parser.Parse("?$filter=Date gt 2012-05-29T23:11:11.123Z");
 
-            var query = parsed.ShouldBeOfType<QueryNode>();
+            var query = parsed.ShouldBeOfType<OptionsNode>();
 
             var assignNode = query.Options.ShouldBeOfType<AssignmentNode>();
 

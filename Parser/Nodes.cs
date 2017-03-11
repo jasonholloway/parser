@@ -64,13 +64,13 @@ namespace Parser
 
     
     
-    public class QueryNode : INode
+    public class OptionsNode : INode
     {
-        public readonly INode Resource;
+        public readonly INode Source;
         public readonly INode Options;
 
-        public QueryNode(INode resource, INode options) {
-            Resource = resource;
+        public OptionsNode(INode source, INode options) {
+            Source = source;
             Options = options;
         }
     }

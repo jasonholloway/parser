@@ -38,7 +38,6 @@ namespace Parser
             _source = source;
 
             _tokens = Lexer.Lex(_source).GetEnumerator();
-            
             Next();
             Next();
         }
@@ -88,13 +87,7 @@ namespace Parser
             => CurrSpan.Match(_source, comp);
         
 
-
-        //but we can't do the backtracking if our results are returned in place
-        //they shouldn't be returned in place
-        //this is the SyntacticalParser - it should return by result, not by in-place query, which would certainly 
-        //be a further step
-
-
+        
         int _stackCount = 0;
         Stack<TokenSpan> _stTokens = null;
 
@@ -116,120 +109,6 @@ namespace Parser
 
 
         
-
-                
-
-        //IReadOnlyList<INode> ParseOptions() 
-        //{
-        //    var nodes = new List<INode>();
-
-        //    while(true) {
-        //        switch(CurrToken) {
-        //            case Token.Ampersand:
-        //                Next();
-        //                break;
-
-        //            case Token.Hash:
-        //            case Token.End:
-        //                return nodes;
-
-        //            default:
-        //                nodes.Add(ParseNode());                        
-        //                break;
-        //        }
-        //    }
-        //}
-
-                
-
-
-
-        //ISegment ParseSegment()
-        //    => Parse_FunctionSegment()
-        //        ?? Parse_SubsetSegment()
-        //        ?? Error<ISegment>();
-
-
-
-
-
-
-
-
-
-
-        //ISegment Parse_FunctionSegment() {
-        //    if(CurrToken == Token.Word && NextToken == Token.Open) {
-        //        var name = CurrSpan.AsString(_source);
-
-        //        Next();
-
-        //        var args = ParseArgs();
-
-        //        return new FunctionSegment(name, args);
-        //    }
-
-        //    return null;   //need lookahead here
-        //}
-
-
-
-
-
-
-        //ISegment Parse_SubsetSegment() 
-        //{
-        //    if(CurrToken == Token.Word) 
-        //    {
-        //        var name = CurrSpan.AsString(_source);
-
-        //        Next();
-
-        //        return new SubsetSegment(name);
-        //    }
-
-        //    return null;
-        //}
-
-
-              
-
-
-
-
-        
-
-        INode[] ParseArgs() 
-        {
-            if(CurrToken == Token.Open) 
-            {
-                Next();
-
-                var args = new List<INode>();
-
-                while(true) {
-                    switch(CurrToken) {
-                        case Token.Comma:
-                            Next();
-                            break;
-
-                        case Token.Close:
-                            Next();
-                            return args.ToArray();
-
-                        default:
-                            var node = ParseNode();
-                            args.Add(node);
-                            break;
-                    }
-                }
-            }
-
-            return null;
-        }
-
-
-
 
         enum Greed
         {
@@ -277,7 +156,7 @@ namespace Parser
                         ?? ParseAssign(node)
                         ?? ParseCall(node)
                         ?? ParseBinary(node)
-                        ?? ParseList(node)
+                        ?? ParseNextItem(node)
                         ?? ParseOptions(node);
 
             return next != null
@@ -286,22 +165,8 @@ namespace Parser
         }
 
 
-        
 
-        INode ParseOptions(INode leftNode) {
-            if(CurrToken == Token.QuestionMark) {
-                Skip(Token.QuestionMark);
-                
-                var options = ParseNode();
-
-                return new QueryNode(leftNode, options);
-            }
-
-            return null;
-        }
-
-        
-        INode ParseList(INode leftNode) {
+        INode ParseNextItem(INode leftNode) {
             if(CurrToken == Token.Comma) {
                 Skip(Token.Comma);
 
@@ -312,6 +177,41 @@ namespace Parser
 
             return null;
         }
+
+
+
+
+        INode ParseOptions(INode leftNode) {
+            if(CurrToken == Token.QuestionMark) {
+                Skip(Token.QuestionMark);
+
+                var node = ParseNode();
+                
+                return new OptionsNode(leftNode, ParseNextOption(node) ?? node);
+            }
+
+            return null;
+        }
+
+
+        INode ParseNextOption(INode leftNode) {
+            if(CurrToken == Token.Ampersand) {
+                Skip(Token.Ampersand);
+
+                var option = ParseNode();
+
+                return new ListNode(leftNode, ParseNextOption(option) ?? option);
+            }
+
+            return null;
+        }
+
+
+
+
+
+
+
 
 
 
