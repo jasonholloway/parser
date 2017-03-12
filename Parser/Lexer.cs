@@ -30,26 +30,37 @@ namespace Parser
         Hash,
         Dot,
         Equals,
-        Ampersand
+        Ampersand,
+
+        Guid,
+        Date,
+        DateTime,
+        Decimal
     }
 
 
 
     internal static class CharExtensions
-    {
+    {        
+
         public static bool IsNumber(this char c)
             => c >= '0' && c <= '9';
 
         public static bool IsQuoteMark(this char c)
             => c == '\'' || c == '"';
 
-        public static bool IsWordChar(this char c)
+        public static bool IsAlpha(this char c)
             => (c >= 'A' && c <= 'z');
 
         public static bool IsWhitespace(this char c)
             => c == ' ';
-        
 
+
+        public static bool IsHex(this char c)
+            => c.IsNumber()
+                || (c >= 'a' && c <= 'f')
+                || (c >= 'A' && c <= 'F');
+        
 
         public static int DecodeAsHex(this char c) {
             if(c <= '9') return c - '0';
@@ -65,25 +76,14 @@ namespace Parser
 
 
     }
-
-
-    //Split undecoded URL into components scheme, hier-part, query, and fragment at first ":", then first "?", and then first "#" 
-
-    //so we should do prelimary splitting,
-    //returning nested enumerations of nested tokens
-
-    //At the top level: TopToken.Scheme, TopToken.Part, TopToken.Query, TopToken.Fragment
-    //The QueryToken will then split into its internal tokens when inspected
-    //
-
-
-
+    
 
 
 
     public static class Lexer
-    {
-        
+    {     
+           
+
         class Context
         {
             public CharReader Reader { get; private set; }
@@ -97,6 +97,7 @@ namespace Parser
             public char NextChar { get; private set; }
 
 
+            
             public Context(string source) 
             {
                 Source = source;
@@ -107,17 +108,53 @@ namespace Parser
             }
             
 
-            public char Shift() 
+            public void Take() 
             {
                 Char = NextChar;
-                
-                Reader.MoveNext();
-                
+
                 Right = Reader.ReadStart;
 
-                NextChar = Reader.Current;
+                Reader.MoveNext();
 
-                return Char;
+                NextChar = Reader.Current;                
+            }
+
+
+            public bool Take(char @char) {
+                if(Char != @char) return false;
+                Take();
+                return true;
+            }
+            
+
+            public bool TakeHex(int count = 1) {
+                for(int i = 0; i < count; i++) {
+                    if(!Char.IsHex()) return false;
+                    Take();
+                }
+
+                return true;
+            }
+
+
+
+            public bool TakeNumeric(int count = 1) {
+                for(int i = 0; i < count; i++) {
+                    if(!Char.IsNumber()) return false;
+                    Take();
+                }
+
+                return true;
+            }
+
+
+            public bool TakeAlpha(int count = 1) {
+                for(int i = 0; i < count; i++) {
+                    if(!Char.IsAlpha()) return false;
+                    Take();
+                }
+
+                return true;
             }
 
 
@@ -129,17 +166,33 @@ namespace Parser
                 var token = TokenSpan.Of(type, Left, Right);
 
                 Left = Right;
-
-                Shift();
-
+                
                 return token;
             }
-                                   
+
+            
+            public Action CreateRestorer() {
+                var oldReader = Reader.Clone();
+
+                var oldLeft = Left;
+                var oldRight = Right;
+                var oldChar = Char;
+                var oldNextChar = NextChar;
+
+                return () => {
+                    Left = oldLeft;    //bizarrely this should work, as these are captured as values
+                    Right = oldRight;
+                    Char = oldChar;
+                    NextChar = oldNextChar;
+                    Reader = oldReader;
+                };
+            }
+
         }
 
 
 
-        
+
 
         public static IEnumerable<TokenSpan> Lex(string source)
             => Lex(new Context(source));
@@ -150,13 +203,17 @@ namespace Parser
         {
             yield return x.Emit(Token.Start);
 
-            x.Shift();
+            x.Take();
+
+            x.Take();
             
             while(!x.AtEnd) {
                 yield return (TokenSpan)(LexSpace(x)
                                             ?? LexChars(x)
-                                            ?? LexNumeric(x)
                                             ?? LexString(x)
+                                            ?? LexGuid(x)
+                                            ?? LexDate(x)
+                                            ?? LexNumeric(x)
                                             ?? LexWord(x)
                                             ?? LexReservedWord(x));  
             }
@@ -164,81 +221,160 @@ namespace Parser
             yield return x.Emit(Token.End);
         }
 
-        
-        static TokenSpan? LexNumeric(Context x) 
-        {
-            if(!x.Char.IsNumber()) return null;
 
-            while(x.NextChar.IsNumber()) x.Shift(); //it's true - it still seems dates should be lexed here
+
             
-            return x.Emit(Token.Number);            
-        }
 
+        static TokenSpan? LexGuid(Context x) {
+            if(x.Char.IsHex() && x.NextChar.IsHex()) 
+            {
+                var restore = x.CreateRestorer();
 
-        static TokenSpan? LexString(Context x) 
-        {
-            if(!x.Char.IsQuoteMark()) return null;
-            
-            while(true) {
-                if(x.Shift().IsQuoteMark()) {
-                    if(x.NextChar.IsQuoteMark()) {
-                        x.Shift();
-                    }
-                    else {
-                        break;
-                    }
+                bool isGuid = x.TakeHex(8)
+                                && x.Take('-')
+                                && x.TakeHex(4)
+                                && x.Take('-')
+                                && x.TakeHex(4)
+                                && x.Take('-')
+                                && x.TakeHex(4)
+                                && x.Take('-')
+                                && x.TakeHex(12);
+
+                if(isGuid) {
+                    return x.Emit(Token.Guid);
+                }
+                else {
+                    restore();
                 }
             }
-            
-            return x.Emit(Token.String);
+
+            return null;
         }
+
+
+
+
+
+        static TokenSpan? LexDate(Context x) {
+            if(x.Char.IsNumber() && x.NextChar.IsNumber()) 
+            {
+                var restore = x.CreateRestorer();
+
+                bool isDate = x.TakeNumeric(4)
+                                && x.Take('-')
+                                && x.TakeNumeric(2)
+                                && x.Take('-')
+                                && x.TakeNumeric(2);
+
+                if(isDate) {
+                    return x.Emit(Token.Date);
+                }
+                else {
+                    restore();
+                }
+            }
+
+            return null;
+        }
+
+
+
+
+
+        static TokenSpan? LexNumeric(Context x) 
+        {
+            if(x.Char.IsNumber()) {
+                while(x.TakeNumeric()) { }
+
+                return x.Emit(Token.Number);
+            }
+
+            return null;  
+        }
+
+
+        static TokenSpan? LexString(Context x) {
+            if(x.Char.IsQuoteMark()) 
+            {
+                while(true) 
+                {
+                    x.Take();
+
+                    if(x.Char.IsQuoteMark()) {
+                        x.Take();
+
+                        if(x.Char.IsQuoteMark()) {
+                            x.Take();
+                        }
+                        else {
+                            break;
+                        }
+                    }
+                }
+
+                return x.Emit(Token.String);
+            }
+
+            return null;
+        }
+
 
         static TokenSpan? LexReservedWord(Context x) 
         {
-            if(x.Char != '$') return null;
+            if(x.Take('$')) {
+                while(x.TakeAlpha()) { }
 
-            x.Shift(); //skip '$'
+                return x.Emit(Token.ReservedWord);
+            }
 
-            while(x.NextChar.IsWordChar()) x.Shift();
-            
-            return x.Emit(Token.ReservedWord);
+            return null;
         }
                         
         static TokenSpan? LexWord(Context x) 
         {
-            if(!x.Char.IsWordChar()) return null;
+            if(x.TakeAlpha()) {
+                while(x.TakeAlpha()) { }
 
-            while(x.NextChar.IsWordChar()) x.Shift();
-            
-            return x.Emit(Token.Word);
+                return x.Emit(Token.Word);
+            }
+
+            return null;
         }
 
         static TokenSpan? LexSpace(Context x) 
         {
-            if(!x.Char.IsWhitespace()) return null;
+            if(x.Take(' ')) {
+                while(x.Take(' ')) { }
 
-            while(x.NextChar.IsWhitespace()) x.Shift();
-            
-            return x.Emit(Token.Space);
+                return x.Emit(Token.Space);
+            }
+
+            return null;
         }
 
 
         static TokenSpan? LexChars(Context x) 
         {
+            Token token;
+
             switch(x.Char) {
-                case '/': return x.Emit(Token.Slash);
-                case ',': return x.Emit(Token.Comma);
-                case '.': return x.Emit(Token.Dot);
-                case '=': return x.Emit(Token.Equals);
-                case '(': return x.Emit(Token.Open);
-                case ')': return x.Emit(Token.Close);
-                case ':': return x.Emit(Token.Colon);
-                case '-': return x.Emit(Token.Hyphen);
-                case '&': return x.Emit(Token.Ampersand);
-                case '?': return x.Emit(Token.QuestionMark);
-                case '#': return x.Emit(Token.Hash);
+                case '/': token = Token.Slash; break;
+                case ',': token = Token.Comma; break;
+                case '.': token = Token.Dot; break;
+                case '=': token = Token.Equals; break;
+                case '(': token = Token.Open; break;
+                case ')': token = Token.Close; break;
+                case ':': token = Token.Colon; break;
+                case '-': token = Token.Hyphen; break;
+                case '&': token = Token.Ampersand; break;
+                case '?': token = Token.QuestionMark; break;
+                case '#': token = Token.Hash; break;
                 default:  return null;
             }
+
+            x.Take();
+
+            return x.Emit(token);
         }
                 
 

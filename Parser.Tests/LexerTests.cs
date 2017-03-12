@@ -120,7 +120,7 @@ namespace Parser.Tests
         }
 
 
-
+        
 
         [Fact(DisplayName = "Lexes % encodings #2")]
         public void OptionsLexing_Handles_PercentEncodings2() 
@@ -155,28 +155,70 @@ namespace Parser.Tests
             });
         }
 
-                
 
-        [Fact(DisplayName = "Lexes dates as sequences of tokens, to be parsed into date values later")]
-        public void Lexes_Dates() {
-            var spans = Lexer.Lex($"2012-05-29T09:13:28").ToArray();
-            
+
+
+
+
+        [Fact(DisplayName = "Lexes GUID as single token")]
+        public void Lexes_GUID() {
+            var spans = Lexer.Lex($"Aa1234ea-4321-1234-bbBB-AAAA1111cccc").ToArray();
+
             spans.ShouldBe(new[] {
                 TokenSpan.Of(Token.Start, 0, 0),
-                TokenSpan.Of(Token.Number, 0, 4),
-                TokenSpan.Of(Token.Hyphen, 4, 5),
-                TokenSpan.Of(Token.Number, 5, 7),
-                TokenSpan.Of(Token.Hyphen, 7, 8),
-                TokenSpan.Of(Token.Number, 8, 10),
-                TokenSpan.Of(Token.Word, 10, 11),
-                TokenSpan.Of(Token.Number, 11, 13),
-                TokenSpan.Of(Token.Colon, 13, 14),
-                TokenSpan.Of(Token.Number, 14, 16),
-                TokenSpan.Of(Token.Colon, 16, 17),
-                TokenSpan.Of(Token.Number, 17, 19),
-                TokenSpan.Of(Token.End, 19, 19)
+                TokenSpan.Of(Token.Guid, 0, 36),
+                TokenSpan.Of(Token.End, 36, 36)
             });
         }
+
+
+
+        [Fact(DisplayName = "Lexes YYYY-MM-DD date as single token")]
+        public void Lexes_Date() {
+            var spans = Lexer.Lex($"2017-03-01Boo").ToArray();
+
+            spans.ShouldBe(new[] {
+                TokenSpan.Of(Token.Start, 0, 0),
+                TokenSpan.Of(Token.Date, 0, 10),
+                TokenSpan.Of(Token.Word, 10, 13),
+                TokenSpan.Of(Token.End, 13, 13)
+            });
+        }
+
+
+
+
+
+
+
+        [Fact(DisplayName = "Lexes datetime as single token")]
+        public void Lexes_DateTime() {
+            var spans = Lexer.Lex($"2012-05-29T09:13:28ZHello").ToArray();
+
+            spans.ShouldBe(new[] {
+                TokenSpan.Of(Token.Start, 0, 0),
+                TokenSpan.Of(Token.Date, 0, 20),
+                TokenSpan.Of(Token.Word, 20, 25),
+                TokenSpan.Of(Token.End, 25, 25)
+            });
+        }
+
+
+
+        [Fact(DisplayName = "Lexes decimal as single token")]
+        public void Lexes_Decimal() {
+            var spans = Lexer.Lex($"2.89Hello").ToArray();
+
+            spans.ShouldBe(new[] {
+                TokenSpan.Of(Token.Start, 0, 0),
+                TokenSpan.Of(Token.Decimal, 0, 4),
+                TokenSpan.Of(Token.Word, 4, 9),
+                TokenSpan.Of(Token.End, 9, 9)
+            });
+        }
+
+
+
 
 
 
