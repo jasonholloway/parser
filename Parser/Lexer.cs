@@ -286,6 +286,12 @@ namespace Parser
             if(x.Char.IsNumber()) {
                 while(x.TakeNumeric()) { }
 
+                if(x.Take('.')) {
+                    while(x.TakeNumeric()) { }
+
+                    return x.Emit(Token.Decimal);
+                }
+                
                 return x.Emit(Token.Number);
             }
 

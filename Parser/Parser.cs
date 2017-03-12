@@ -460,37 +460,31 @@ namespace Parser
 
         INode ParseString() 
         {
-            if(CurrToken == Token.String) 
-            {
-                return new ValueNode<string>(Take(Token.String).AsString(_source));
+            if(CurrToken == Token.String) {
+                var span = Take(Token.String);
+
+                return new ValueNode<string>(span.AsString(_source));
             }
 
             return null;
         }
-
 
 
 
 
         INode ParseDecimal() 
         {
-            if(CurrToken == Token.Number && NextToken == Token.Dot) {
-                var left = CurrSpan.Left;
+            if(CurrToken == Token.Decimal) {
+                var span = Take(Token.Decimal);
+                var value = Decimal.Parse(span.AsString(_source));
 
-                Skip(Token.Number);
-                Skip(Token.Dot);
-                Skip(Token.Number);
-
-                var right = CurrSpan.Right;
-
-                var val = decimal.Parse(_source.Read(left, right));
-
-                return new ValueNode<decimal>(val);
+                return new ValueNode<decimal>(value);                
             }
 
             return null;
         }
 
+        
 
         INode ParseInteger() 
         {
