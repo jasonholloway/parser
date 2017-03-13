@@ -248,7 +248,7 @@ namespace Parser.Tests
 
 
 
-
+        
         [Fact(DisplayName = "Parses V4 dates")]
         public void Parses_V4_Dates() {
             var parsed = Parser.Parse("?$filter=Date gt 2012-05-29");
@@ -403,7 +403,14 @@ namespace Parser.Tests
 
         [Fact(DisplayName = "Parses GUIDs")]
         public void Parses_Guids() {
-            throw new NotImplementedException();
+            var guid = Guid.NewGuid();
+
+            var parsed = Parser.Parse($"Thing eq {guid}");
+
+            var eqNode = parsed.ShouldBeOfType<BinaryOperatorNode>();
+
+            eqNode.Right.ShouldBeOfType<ValueNode<Guid>>()
+                        .Value.ShouldBe(guid);
         }
 
 

@@ -380,9 +380,11 @@ namespace Parser
 
         INode ParseValue()
             => ParseString()
+                ?? ParseDate()
                 ?? ParseV4Date()
                 ?? ParseDecimal()
                 ?? ParseInteger()
+                ?? ParseGuid()
                 ?? ParseBoolean()
                 ?? Null<INode>();
 
@@ -497,6 +499,30 @@ namespace Parser
             return null;
         }
 
+
+        INode ParseGuid() 
+        {
+            if(CurrToken == Token.Guid) {
+                var guid = Guid.Parse(Take(Token.Guid).AsString(_source));
+
+                return new ValueNode<Guid>(guid);
+            }
+
+            return null;
+        }
+
+
+
+
+        INode ParseDate() {
+            if(CurrToken == Token.Date) {
+                var date = DateTimeOffset.Parse(Take(Token.Date).AsString(_source));
+
+                return new ValueNode<DateTimeOffset>(date);
+            }
+
+            return null;
+        }
 
 
 
